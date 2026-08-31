@@ -1,0 +1,693 @@
+# ============================================================================
+# Lante ERP Platform - Main Configuration
+# ============================================================================
+
+global:
+  environment: production
+  namespace: new-erp
+  imagePullPolicy: Always
+  imageRegistry: ""
+  storageClass: "local-path"
+ghcrSecret:
+  dockerconfigjson: ""
+  security:
+    allowInsecureImages: true
+  jwt:
+    issuer: "LanteUserService"
+    audience: "LanteUserService"
+    expirationMinutes: 480
+# ============================================================================
+# INGRESS - Domains
+# ============================================================================
+ingress:
+  enabled: true
+  className: traefik
+  annotations:
+    cert-manager.io/cluster-issuer: "letsencrypt-prod"
+    traefik.ingress.kubernetes.io/router.entrypoints: "web,websecure"
+    traefik.ingress.kubernetes.io/router.middlewares: "new-erp-redirect-https@kubernetescrd"
+  # Frontend — lante.africa → React app
+  frontendHosts:
+    - host: lante.africa
+      paths:
+        - path: /
+          pathType: Prefix
+          service: lante-frontend-service
+          port: 80
+  # Backend — kmk.support.qalibrated.co.ke → Ocelot API gateway
+  backendHosts:
+    - host: kmk.support.qalibrated.co.ke
+      paths:
+        - path: /
+          pathType: Prefix
+          service: lante-gateway
+          port: 5000
+  tls:
+    - secretName: lante-erp-tls
+      hosts:
+        - lante.africa
+        - kmk.support.qalibrated.co.ke
+# ============================================================================
+# FRONTEND SERVICE - React App (lante.africa)
+# ============================================================================
+frontendService:
+  enabled: true
+  replicaCount: 2
+  fullnameOverride: "lante-frontend-service"
+  image:
+    repository: ghcr.io/lante-africa/lante-erp/frontend-service
+    tag: "main-aa840db"
+    pullPolicy: Always
+  resources:
+    requests:
+      memory: "64Mi"
+      cpu: "50m"
+    limits:
+      memory: "128Mi"
+      cpu: "100m"
+  service:
+    type: ClusterIP
+    port: 80
+    targetPort: 80
+# ============================================================================
+# GATEWAY SERVICE - Ocelot API Gateway (kmk.support.qalibrated.co.ke)
+# ============================================================================
+gateway:
+  enabled: true
+  replicaCount: 2
+  fullnameOverride: "lante-gateway"
+  image:
+    repository: ghcr.io/lante-africa/lante-erp/gateway-service
+    tag: "main-e85f314"
+    pullPolicy: Always
+  resources:
+    requests:
+      memory: "128Mi"
+      cpu: "100m"
+    limits:
+      memory: "256Mi"
+      cpu: "250m"
+  service:
+    type: ClusterIP
+    port: 5000
+    targetPort: 5000
+  env:
+    ASPNETCORE_ENVIRONMENT: "Production"
+    ASPNETCORE_URLS: "http://+:5000"
+# ============================================================================
+# USER SERVICE - Authentication & User Management
+# ============================================================================
+userService:
+  enabled: true
+  replicaCount: 1
+  fullnameOverride: "lante-user-service"
+  image:
+    repository: ghcr.io/lante-africa/lante-erp/user-service
+    tag: "main-e85f314"
+    pullPolicy: Always
+  resources:
+    requests:
+      memory: "512Mi"
+      cpu: "250m"
+    limits:
+      memory: "2Gi"
+      cpu: "1000m"
+  service:
+    type: ClusterIP
+    port: 8080
+    targetPort: 8080
+  postgresql:
+    enabled: false
+# ============================================================================
+# LICENSE SERVICE - License Management
+# ============================================================================
+licenseService:
+  enabled: true
+  replicaCount: 1
+  fullnameOverride: "lante-license-service"
+  image:
+    repository: ghcr.io/lante-africa/lante-erp/license-service
+    tag: "main-e635000"
+    pullPolicy: Always
+  resources:
+    requests:
+      memory: "256Mi"
+      cpu: "100m"
+    limits:
+      memory: "1Gi"
+      cpu: "500m"
+  service:
+    type: ClusterIP
+    port: 8080
+    targetPort: 8080
+  postgresql:
+    enabled: false
+# ============================================================================
+# TICKETING SERVICE - Support Ticket Management
+# ============================================================================
+ticketingService:
+  enabled: true
+  replicaCount: 1
+  fullnameOverride: "lante-ticketing-service"
+  image:
+    repository: ghcr.io/lante-africa/lante-erp/ticketing-service
+    tag: "main-e635000"
+    pullPolicy: Always
+  resources:
+    requests:
+      memory: "512Mi"
+      cpu: "250m"
+    limits:
+      memory: "2Gi"
+      cpu: "1000m"
+  service:
+    type: ClusterIP
+    port: 8080
+    targetPort: 8080
+  storage:
+    publicBaseUrl: "https://kmk.support.qalibrated.co.ke"
+    size: 10Gi
+    storageClass: "local-path"
+  # Opt-in for Velero's File-System-Backup: only the named volume gets backed up (see
+  # kubernetes/velero/ + GitHub issue #200 PR 4). Deliberately NOT using
+  # defaultVolumesToFsBackup — that would also sweep the live Postgres/Redis data
+  # directories, which isn't crash-consistent and would produce a backup that looks fine
+  # while being subtly torn.
+  podAnnotations:
+    backup.velero.io/backup-volumes: uploads
+  postgresql:
+    enabled: false
+# ============================================================================
+# OPERATION SERVICE - Operations Management
+# ============================================================================
+operationService:
+  enabled: true
+  replicaCount: 1
+  fullnameOverride: "lante-operation-service"
+  image:
+    repository: ghcr.io/lante-africa/lante-erp/operation-service
+    tag: "main-e635000"
+    pullPolicy: Always
+  resources:
+    requests:
+      memory: "512Mi"
+      cpu: "250m"
+    limits:
+      memory: "2Gi"
+      cpu: "1000m"
+  service:
+    type: ClusterIP
+    port: 8080
+    targetPort: 8080
+  storage:
+    publicBaseUrl: "https://kmk.support.qalibrated.co.ke"
+    size: 10Gi
+    storageClass: "local-path"
+  podAnnotations:
+    backup.velero.io/backup-volumes: uploads
+  postgresql:
+    enabled: false
+# ============================================================================
+# CRM SERVICE - CRM & Sales (Module 6), schema-per-tenant
+# ============================================================================
+crmService:
+  enabled: true
+  replicaCount: 1
+  fullnameOverride: "lante-crm-service"
+  image:
+    repository: ghcr.io/lante-africa/lante-erp/crm-service
+    tag: "main-e635000"
+    pullPolicy: Always
+  resources:
+    requests:
+      memory: "512Mi"
+      cpu: "250m"
+    limits:
+      memory: "2Gi"
+      cpu: "1000m"
+  service:
+    type: ClusterIP
+    port: 8080
+    targetPort: 8080
+  crm:
+    financeServiceBaseUrl: "http://lante-finance-service:8080"
+    operationsServiceBaseUrl: "http://lante-operation-service:8080"
+  postgresql:
+    enabled: false
+# ============================================================================
+# PROCUREMENT SERVICE - Procurement & Supply Chain (Module 4), schema-per-tenant
+# ============================================================================
+procurementService:
+  enabled: true
+  replicaCount: 1
+  fullnameOverride: "lante-procurement-service"
+  image:
+    repository: ghcr.io/lante-africa/lante-erp/procurement-service
+    tag: "main-e635000"
+    pullPolicy: Always
+  resources:
+    requests:
+      memory: "512Mi"
+      cpu: "250m"
+    limits:
+      memory: "2Gi"
+      cpu: "1000m"
+  service:
+    type: ClusterIP
+    port: 8080
+    targetPort: 8080
+  postgresql:
+    enabled: false
+# ============================================================================
+# HR SERVICE - Human Resources & Payroll (Module 3)
+# ============================================================================
+hrService:
+  enabled: true
+  replicaCount: 1
+  fullnameOverride: "lante-hr-service"
+  image:
+    repository: ghcr.io/lante-africa/lante-erp/hr-service
+    tag: "main-82d14d8"
+    pullPolicy: Always
+  resources:
+    requests:
+      memory: "512Mi"
+      cpu: "250m"
+    limits:
+      memory: "2Gi"
+      cpu: "1000m"
+  service:
+    type: ClusterIP
+    port: 8080
+    targetPort: 8080
+  postgresql:
+    enabled: false
+# ============================================================================
+# FLEET SERVICE - Fleet & Vehicle Management
+# ============================================================================
+fleetService:
+  enabled: true
+  replicaCount: 1
+  fullnameOverride: "lante-fleet-service"
+  image:
+    repository: ghcr.io/lante-africa/lante-erp/fleet-service
+    tag: "main-e635000"
+    pullPolicy: Always
+  resources:
+    requests:
+      memory: "512Mi"
+      cpu: "250m"
+    limits:
+      memory: "2Gi"
+      cpu: "1000m"
+  service:
+    type: ClusterIP
+    port: 8080
+    targetPort: 8080
+  podAnnotations:
+    backup.velero.io/backup-volumes: uploads
+  postgresql:
+    enabled: false
+hseService:
+  enabled: true
+  replicaCount: 1
+  fullnameOverride: "lante-hse-service"
+  image:
+    repository: ghcr.io/lante-africa/lante-erp/hse-service
+    tag: "main-e635000"
+    pullPolicy: Always
+  resources:
+    requests:
+      memory: "256Mi"
+      cpu: "125m"
+    limits:
+      memory: "1Gi"
+      cpu: "500m"
+  service:
+    type: ClusterIP
+    port: 8080
+    targetPort: 8080
+  podAnnotations:
+    backup.velero.io/backup-volumes: uploads
+  postgresql:
+    enabled: false
+complianceService:
+  enabled: true
+  replicaCount: 1
+  fullnameOverride: "lante-compliance-service"
+  image:
+    repository: ghcr.io/lante-africa/lante-erp/compliance-service
+    tag: "main-e635000"
+    pullPolicy: Always
+  resources:
+    requests:
+      memory: "256Mi"
+      cpu: "125m"
+    limits:
+      memory: "1Gi"
+      cpu: "500m"
+  service:
+    type: ClusterIP
+    port: 8080
+    targetPort: 8080
+  podAnnotations:
+    backup.velero.io/backup-volumes: uploads
+  postgresql:
+    enabled: false
+subcontractsService:
+  enabled: true
+  replicaCount: 1
+  fullnameOverride: "lante-subcontracts-service"
+  image:
+    repository: ghcr.io/lante-africa/lante-erp/subcontracts-service
+    tag: "main-e635000"
+    pullPolicy: Always
+  resources:
+    requests:
+      memory: "256Mi"
+      cpu: "125m"
+    limits:
+      memory: "1Gi"
+      cpu: "500m"
+  service:
+    type: ClusterIP
+    port: 8080
+    targetPort: 8080
+  podAnnotations:
+    backup.velero.io/backup-volumes: uploads
+  postgresql:
+    enabled: false
+# ============================================================================
+# STORE SERVICE - Stores, Inventory & Stock Management
+# ============================================================================
+storeService:
+  enabled: true
+  replicaCount: 1
+  fullnameOverride: "lante-store-service"
+  image:
+    repository: ghcr.io/lante-africa/lante-erp/store-service
+    tag: "main-82d14d8"
+    pullPolicy: Always
+  resources:
+    requests:
+      memory: "512Mi"
+      cpu: "250m"
+    limits:
+      memory: "2Gi"
+      cpu: "1000m"
+  service:
+    type: ClusterIP
+    port: 8080
+    targetPort: 8080
+  podAnnotations:
+    backup.velero.io/backup-volumes: uploads
+  postgresql:
+    enabled: false
+# ============================================================================
+# FINANCE SERVICE - GL / AR / AP / Budgets / Treasury (schema-per-tenant)
+# ============================================================================
+financeService:
+  enabled: true
+  replicaCount: 1
+  fullnameOverride: "lante-finance-service"
+  image:
+    repository: ghcr.io/lante-africa/lante-erp/finance-service
+    tag: "main-82d14d8"
+    pullPolicy: Always
+  resources:
+    requests:
+      memory: "512Mi"
+      cpu: "250m"
+    limits:
+      memory: "2Gi"
+      cpu: "1000m"
+  service:
+    type: ClusterIP
+    port: 8080
+    targetPort: 8080
+  finance:
+    enforceApprovalAuthority: false
+  postgresql:
+    enabled: false
+# ============================================================================
+# REPORTING SERVICE - cross-service aggregation & reports (stateless, no DB)
+# ============================================================================
+reportingService:
+  enabled: true
+  replicaCount: 1
+  fullnameOverride: "lante-reporting-service"
+  image:
+    repository: ghcr.io/lante-africa/lante-erp/reporting-service
+    tag: "main-e635000"
+    pullPolicy: Always
+  resources:
+    requests:
+      memory: "256Mi"
+      cpu: "125m"
+    limits:
+      memory: "1Gi"
+      cpu: "500m"
+  service:
+    type: ClusterIP
+    port: 8080
+    targetPort: 8080
+  podAnnotations:
+    backup.velero.io/backup-volumes: uploads
+# ============================================================================
+# SHARED POSTGRESQL - one instance, one database per service (Option A)
+# ============================================================================
+# Consolidates the previously-separate per-service Postgres instances into a
+# single shared server to cut pod/PVC overhead and simplify backups. Each
+# service keeps its own logical database (no schema/table merging, no app
+# code changes) — only the Host changes in each service's connection string
+# (kubernetes/secrets/generate-secrets.sh). The lante_app runtime role and
+# all databases are created once on first init via primary.initdb.scripts.
+postgresql:
+  enabled: true
+  fullnameOverride: "lante-postgresql"
+  auth:
+    existingSecret: "lante-erp-secrets"
+    secretKeys:
+      adminPasswordKey: "DB_PASSWORD"
+  primary:
+    pgHbaConfiguration: |
+      host all all 0.0.0.0/0 scram-sha-256
+      host all all ::/0 scram-sha-256
+      local all all scram-sha-256
+      host all all 127.0.0.1/32 scram-sha-256
+      host all all ::1/128 scram-sha-256
+    extraEnvVars:
+      - name: LANTE_APP_PASSWORD
+        valueFrom:
+          secretKeyRef:
+            name: lante-erp-secrets
+            key: APP_DB_PASSWORD
+      # pgBackRest WAL-archiving config (GitHub issue #200 PR 5) — pgbackrest itself is already
+      # bundled in this exact Bitnami image, no extra binary/image needed. Every secretKeyRef
+      # below is `optional: true` so this pod starts fine even if the MinIO credentials secret
+      # (from kubernetes/velero/, a separate ArgoCD Application) doesn't exist yet or hasn't
+      # synced: archive_command below will simply fail and Postgres queues WAL in pg_wal until
+      # it starts succeeding — not a crash loop. See backup-pgbackrest-cronjob.yaml for the
+      # scheduled full/diff backup half of this; this is only the continuous WAL-push half.
+      - name: PGBACKREST_STANZA
+        value: "lante"
+      - name: PGBACKREST_REPO1_TYPE
+        value: "s3"
+      # Hardcoded (not a {{ .Values.backups... }} reference) because this block is rendered via
+      # `tpl` inside the postgresql SUBCHART's own context — subcharts only see their own values
+      # plus `.Values.global`, not the parent chart's `backups` block. Keep in sync with
+      # `backups.pgbackrest.*` below if either changes.
+      - name: PGBACKREST_REPO1_S3_BUCKET
+        value: "lante-pgbackrest"
+      - name: PGBACKREST_REPO1_S3_ENDPOINT
+        value: "lante-backup-minio.new-erp.svc:9000"
+      - name: PGBACKREST_REPO1_S3_REGION
+        value: "minio"
+      - name: PGBACKREST_REPO1_S3_URI_STYLE
+        value: "path"
+      - name: PGBACKREST_REPO1_PATH
+        value: "/pgbackrest/lante"
+      # pgBackRest has no plain-HTTP mode for S3 repos (confirmed against its own docs) — MinIO
+      # serves a self-signed cert (kubernetes/velero/templates/minio-tls-secret.yaml), so
+      # verification has to be off, same tradeoff Velero makes via insecureSkipTLSVerify.
+      - name: PGBACKREST_REPO1_STORAGE_VERIFY_TLS
+        value: "n"
+      - name: PGBACKREST_REPO1_RETENTION_FULL
+        value: "4"
+      - name: PGBACKREST_REPO1_RETENTION_FULL_TYPE
+        value: "count"
+      # gz, not zst: confirmed live against the actual bundled binary (pgBackRest 2.58.0 in this
+      # exact Bitnami image) — it errors with "not built with 'compress-type=zst' support".
+      # Every WAL segment failed to archive until this was caught and fixed.
+      - name: PGBACKREST_COMPRESS_TYPE
+        value: "gz"
+      - name: PGBACKREST_REPO1_S3_KEY
+        valueFrom:
+          secretKeyRef: {name: lante-backup-minio-credentials, key: MINIO_ROOT_USER, optional: true}
+      - name: PGBACKREST_REPO1_S3_KEY_SECRET
+        valueFrom:
+          secretKeyRef: {name: lante-backup-minio-credentials, key: MINIO_ROOT_PASSWORD, optional: true}
+      # Explicit, not inferred from $PGDATA — a bare `pgbackrest` CLI invocation (e.g. via
+      # `kubectl exec`, which is how the scheduled backup CronJob runs it — see
+      # backup-pgbackrest-cronjob.yaml, since pgBackRest's pg1-host option is for its own
+      # SSH/TLS remote protocol, not plain PostgreSQL TCP, so a separate pod can't drive this
+      # remotely) doesn't automatically pick up the server's PGDATA env var.
+      - name: PGBACKREST_PG1_PATH
+        value: "/bitnami/postgresql/data"
+    extendedConfiguration: |
+      archive_mode = on
+      archive_command = 'pgbackrest --stanza=lante archive-push %p'
+      archive_timeout = 60
+    initdb:
+      scripts:
+        create-databases-and-app-role.sh: |
+          #!/bin/bash
+          # Creates one database per service plus the least-privilege
+          # `lante_app` runtime role shared across all of them. Runs only
+          # on an empty data volume (docker-entrypoint-initdb.d contract).
+          set -e
+          : "${LANTE_APP_PASSWORD:?LANTE_APP_PASSWORD must be set}"
+          export PGPASSWORD="$POSTGRES_PASSWORD"
+
+          DATABASES="lante_userservice lante_licensing lante_ticketing lante_fleetservice lante_operations lante_finance lante_stores lante_hse lante_compliance lante_subcontracts lante_reporting lante_crm lante_hr lante_procurement"
+
+          for db in $DATABASES; do
+            psql -v ON_ERROR_STOP=1 --username "postgres" --dbname "postgres" -c "CREATE DATABASE $db;"
+          done
+
+          psql -v ON_ERROR_STOP=1 --username "postgres" --dbname "postgres" <<-EOSQL
+              DO \$\$
+              BEGIN
+                  IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'lante_app') THEN
+                      CREATE ROLE lante_app LOGIN PASSWORD '${LANTE_APP_PASSWORD}';
+                  END IF;
+              END
+              \$\$;
+          EOSQL
+
+          for db in $DATABASES; do
+            psql -v ON_ERROR_STOP=1 --username "postgres" --dbname "$db" <<-EOSQL
+                GRANT CONNECT ON DATABASE "$db" TO lante_app;
+                GRANT USAGE ON SCHEMA public TO lante_app;
+                GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO lante_app;
+                GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO lante_app;
+                ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO lante_app;
+                ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT USAGE, SELECT ON SEQUENCES TO lante_app;
+          EOSQL
+          done
+
+          echo "Databases and lante_app role provisioned on shared Postgres instance"
+    resources:
+      requests:
+        memory: "1Gi"
+        cpu: "500m"
+      limits:
+        memory: "4Gi"
+        cpu: "2000m"
+    persistence:
+      size: 60Gi
+# ============================================================================
+# BACKUPS - Tier-0 disaster recovery (see GitHub issue #200 for the full plan)
+# ============================================================================
+# Every sub-flag defaults to false so this chart renders and deploys identically whether or
+# not the backup infrastructure (B2 bucket/credentials, etc.) has been provisioned yet — no
+# job here should ever be able to break the live platform just by existing.
+backups:
+  enabled: true
+  logicalDumps:
+    schedule: "0 2 * * *"
+    # 5 years, the Tax Procedures Act 2015 §23(1)(c) floor for tax/payroll records.
+    retentionDays: 1825
+  verify:
+    schedule: "0 4 * * 0"
+  k3sSqlite:
+    # Separate opt-in: needs node-pinning + a hostPath mount, more cluster-topology-specific
+    # than the other backup jobs. See backup-k3s-sqlite-cronjob.yaml.
+    enabled: false
+  pgbackrest:
+    schedule: "0 1 * * *"
+    # Full on Sunday, differential the other 6 days.
+    fullBackupDayOfWeek: "7"
+    retentionFullCount: 4
+    # Points at the same self-hosted MinIO instance Velero uses (kubernetes/velero/) — no B2/real
+    # offsite destination exists yet. A different bucket than Velero's, same server. Swapping
+    # this for B2 later is a value change here, not a redesign.
+    bucket: "lante-pgbackrest"
+    endpoint: "lante-backup-minio.new-erp.svc:9000"
+    region: "minio"
+  b2:
+    bucket: "lante-erp-backups"
+    endpoint: "s3.us-west-002.backblazeb2.com"
+    region: "us-west-002"
+# ============================================================================
+# REDIS - Shared Cache (used by user-service)
+# ============================================================================
+redis:
+  enabled: true
+  fullnameOverride: "lante-redis"
+  auth:
+    enabled: true
+    existingSecret: "lante-erp-secrets"
+    existingSecretPasswordKey: "REDIS_PASSWORD"
+  master:
+    resources:
+      requests:
+        memory: "256Mi"
+        cpu: "100m"
+      limits:
+        memory: "512Mi"
+        cpu: "250m"
+    persistence:
+      size: 5Gi
+    # Bitnami's default exec-based probes (ping_liveness_local.sh / ping_readiness_local.sh)
+    # fork bash+timeout+redis-cli every few seconds; redis-server (PID 1) never reaps the
+    # reparented orphans, so they accumulate as zombies indefinitely. tcpSocket probes don't
+    # exec anything inside the container, so this eliminates the leak at the source.
+    livenessProbe:
+      enabled: false
+    readinessProbe:
+      enabled: false
+    customLivenessProbe:
+      tcpSocket:
+        port: redis
+      initialDelaySeconds: 20
+      periodSeconds: 5
+      timeoutSeconds: 5
+      successThreshold: 1
+      failureThreshold: 5
+    customReadinessProbe:
+      tcpSocket:
+        port: redis
+      initialDelaySeconds: 20
+      periodSeconds: 5
+      timeoutSeconds: 5
+      successThreshold: 1
+      failureThreshold: 5
+  replica:
+    resources:
+      requests:
+        memory: "256Mi"
+        cpu: "100m"
+      limits:
+        memory: "512Mi"
+        cpu: "150m"
+    livenessProbe:
+      enabled: false
+    readinessProbe:
+      enabled: false
+    customLivenessProbe:
+      tcpSocket:
+        port: redis
+      initialDelaySeconds: 30
+      periodSeconds: 10
+      timeoutSeconds: 20
+      successThreshold: 1
+      failureThreshold: 5
+    customReadinessProbe:
+      tcpSocket:
+        port: redis
+      initialDelaySeconds: 30
+      periodSeconds: 10
+      timeoutSeconds: 10
+      successThreshold: 1
+      failureThreshold: 5

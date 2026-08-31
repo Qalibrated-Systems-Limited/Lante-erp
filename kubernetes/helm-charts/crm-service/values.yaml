@@ -1,0 +1,50 @@
+replicaCount: 1
+
+image:
+  repository: ghcr.io/lante-africa/lante-erp/crm-service
+  pullPolicy: Always
+  tag: ""
+
+imagePullSecrets:
+  - name: ghcr-credentials
+
+nameOverride: ""
+fullnameOverride: ""
+
+serviceAccount:
+  create: true
+  name: ""
+
+service:
+  type: ClusterIP
+  port: 8080
+  targetPort: 8080
+
+resources:
+  requests:
+    memory: "512Mi"
+    cpu: "250m"
+  limits:
+    memory: "2Gi"
+    cpu: "1000m"
+
+autoscaling:
+  enabled: false
+  minReplicas: 1
+  maxReplicas: 1
+  targetCPUUtilizationPercentage: 70
+  targetMemoryUtilizationPercentage: 80
+
+# In-cluster base URLs for the C5/C13 cross-module seams (deal→Finance AR invoice, debtor alerts;
+# deal→Operations project + O1/O6). Empty falls back to a no-op, so the seams stay inert if unset.
+crm:
+  financeServiceBaseUrl: "http://lante-finance-service:8080"
+  operationsServiceBaseUrl: "http://lante-operation-service:8080"
+
+postgresql:
+  enabled: true
+  auth:
+    existingSecret: "lante-erp-secrets"
+  primary:
+    persistence:
+      size: 20Gi

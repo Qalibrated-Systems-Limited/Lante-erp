@@ -1,0 +1,11 @@
+# See Chart.yaml for why this is deliberately minimal: jaegertracing/all-in-one, in-memory
+# storage (no PVC), single replica. It receives OTLP spans from every service (see each
+# Program.cs's `Otel:OtlpEndpoint`, defaulted to this Deployment's Service DNS name) and serves
+# the Jaeger UI. Not exposed via ingress — reach it with
+# `kubectl -n new-erp port-forward svc/lante-jaeger-collector 16686:16686` for now, same
+# no-ingress-yet posture as the staging environment (#221).
+namespace: new-erp
+image: "jaegertracing/all-in-one:1.62"
+resources:
+  requests: { cpu: 100m, memory: 256Mi }
+  limits: { cpu: 500m, memory: 512Mi }

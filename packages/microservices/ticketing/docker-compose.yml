@@ -1,0 +1,19 @@
+services:
+  ticketing-service-api:
+    build: .
+    ports:
+      - "8082:8080"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Production
+      - ASPNETCORE_URLS=http://+:8080
+      - ConnectionStrings__DefaultConnection=Host=lante-postgres;Port=5432;Database=lante_ticketing;Username=lante_user;Password=lante_pass
+      - JWT__SecretKey=lante-jwt-super-secret-key-minimum-32-chars
+      - JWT__Issuer=LanteUserService
+      - JWT__Audience=LanteUserService
+    networks:
+      - lante-user-service-network
+
+networks:
+  lante-user-service-network:
+    external: true
+    name: lante-user-service-network

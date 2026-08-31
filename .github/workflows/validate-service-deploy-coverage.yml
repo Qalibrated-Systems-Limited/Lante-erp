@@ -1,0 +1,72 @@
+name: Validate Service Deploy Coverage
+
+# #227 item 3: the deploy/repackage automation carries hand-maintained lists of every
+# deployable service (chart directories, a repackage-triggers path list, a repackage
+# CHART_DIRS map, and two deploy-to-kubernetes.yml case statements), and nothing kept
+# them in agreement. Found by hand: repackage-helm-charts.yml was missing FIVE charts
+# entirely (crm, procurement, hr, reporting, subcontracts) — a direct edit to any of
+# those chart directories would never trigger a repackage, so ArgoCD's packaged .tgz
+# would silently go stale relative to the chart source. "Invisible until a deploy
+# silently targets nothing" is the issue's own framing, and this is that moment made
+# visible instead.
+#
+# Deliberately NO `if: github.repository ==` guard — a skipped job reports SUCCESS, so
+# once this is a required check a skipped one would still satisfy branch protection.
+# Same reasoning as test-dotnet.yml, and the same failure #198 exists for.
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - "kubernetes/helm-charts/**"
+      - ".github/workflows/repackage-helm-charts.yml"
+      - ".github/workflows/deploy-to-kubernetes.yml"
+      - ".github/workflows/build-*.yml"
+      - "scripts/ci/validate_service_deploy_coverage.py"
+      - "scripts/ci/test_validate_service_deploy_coverage.py"
+      - ".github/workflows/validate-service-deploy-coverage.yml"
+  push:
+      # No branch filter, deliberately. CI now runs on the FORK — the base repo's Actions fail every
+      # run in about a second, which is exhausted minutes rather than a broken build. On the fork a
+      # feature branch produces only a `push` event (the PR is opened against the base repo, so no
+      # `pull_request` event fires here), and with `branches: [main]` that meant a feature branch
+      # triggered almost nothing. Merging unverified again is exactly what #253 was about, in a new
+      # costume. Checks, not builds: the build-and-deploy workflows keep their main-only filter, because
+      # a feature branch must never push an image or deploy.
+    paths:
+      - "kubernetes/helm-charts/**"
+      - ".github/workflows/repackage-helm-charts.yml"
+      - ".github/workflows/deploy-to-kubernetes.yml"
+      - ".github/workflows/build-*.yml"
+      - "scripts/ci/validate_service_deploy_coverage.py"
+      - "scripts/ci/test_validate_service_deploy_coverage.py"
+      - ".github/workflows/validate-service-deploy-coverage.yml"
+
+jobs:
+  coverage:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Run script's own unit tests
+        # Prove the checker works before trusting what it says about the repo.
+        run: python3 -m unittest test_validate_service_deploy_coverage -v
+        working-directory: scripts/ci
+
+      - name: Check every chart is covered by the deploy/repackage automation
+        run: python3 scripts/ci/validate_service_deploy_coverage.py
+
+      - name: Summary
+        if: always()
+        run: |
+          {
+            echo "### Service deploy coverage"
+            echo ""
+            echo "Checks that every \`kubernetes/helm-charts/<chart>\` directory is covered by"
+            echo "repackage-helm-charts.yml's trigger paths + CHART_DIRS map, and by both case"
+            echo "statements in deploy-to-kubernetes.yml. See #227."
+          } >> "$GITHUB_STEP_SUMMARY"

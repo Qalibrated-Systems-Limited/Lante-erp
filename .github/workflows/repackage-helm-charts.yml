@@ -1,0 +1,90 @@
+name: Repackage Helm Charts
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - kubernetes/helm-charts/gateway-service/**
+      - kubernetes/helm-charts/operation-service/**
+      - kubernetes/helm-charts/user-service/**
+      - kubernetes/helm-charts/ticketing-service/**
+      - kubernetes/helm-charts/fleet-service/**
+      - kubernetes/helm-charts/license-service/**
+      - kubernetes/helm-charts/frontend-service/**
+      - kubernetes/helm-charts/finance-service/**
+      - kubernetes/helm-charts/store-service/**
+      - kubernetes/helm-charts/hse-service/**
+      - kubernetes/helm-charts/compliance-service/**
+      - kubernetes/helm-charts/crm-service/**
+      - kubernetes/helm-charts/procurement-service/**
+      - kubernetes/helm-charts/hr-service/**
+      - kubernetes/helm-charts/reporting-service/**
+      - kubernetes/helm-charts/subcontracts-service/**
+
+jobs:
+  repackage:
+    if: github.repository == 'LANTE-AFRICA/Lante-erp' && !contains(github.event.head_commit.message, '[skip ci]')
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          ref: main
+          fetch-depth: 0
+
+      - name: Detect changed charts and repackage
+        run: |
+          CHARTS_DIR="kubernetes/helm-charts/lante-erp-platform/charts"
+          CHANGED=0
+
+          declare -A CHART_DIRS
+          CHART_DIRS=(
+            [gateway-service]="gateway-service"
+            [operation-service]="operation-service"
+            [user-service]="user-service"
+            [ticketing-service]="ticketing-service"
+            [fleet-service]="fleet-service"
+            [license-service]="license-service"
+            [frontend-service]="frontend-service"
+            [finance-service]="finance-service"
+            [store-service]="store-service"
+            [hse-service]="hse-service"
+            [compliance-service]="compliance-service"
+            [crm-service]="crm-service"
+            [procurement-service]="procurement-service"
+            [hr-service]="hr-service"
+            [reporting-service]="reporting-service"
+            [subcontracts-service]="subcontracts-service"
+          )
+
+          BEFORE="${{ github.event.before }}"
+          AFTER="${{ github.event.after }}"
+
+          for CHART in "${!CHART_DIRS[@]}"; do
+            DIR="kubernetes/helm-charts/${CHART_DIRS[$CHART]}"
+            if git diff --name-only "$BEFORE" "$AFTER" | grep -q "^${DIR}/"; then
+              echo "Repackaging $CHART (changes detected in $DIR)"
+              helm package "$DIR" --destination "$CHARTS_DIR"
+              CHANGED=1
+            fi
+          done
+
+          echo "changed=$CHANGED" >> $GITHUB_ENV
+
+      - name: Commit and push repackaged charts
+        if: env.changed == '1'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add kubernetes/helm-charts/lante-erp-platform/charts/
+          git diff --staged --quiet && { echo "No changes to commit"; exit 0; }
+          git commit -m "ci: repackage helm charts after config changes [skip ci]"
+          for i in 1 2 3 4 5; do
+            git push origin main && break
+            echo "Push rejected (attempt $i) — rebasing..."
+            git pull --rebase origin main
+          done

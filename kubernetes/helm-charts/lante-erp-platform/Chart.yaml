@@ -1,0 +1,108 @@
+apiVersion: v2
+name: lante-erp-platform
+description: Lante Microservices Platform - Field service, ticketing, fleet & project management
+type: application
+version: 1.0.0
+appVersion: "1.0.0"
+keywords:
+  - lante
+  - erp
+  - microservices
+  - gateway
+  - ticketing
+  - fleet
+home: https://github.com/LANTE-AFRICA/Lante-erp
+sources:
+  - https://github.com/LANTE-AFRICA/Lante-erp
+maintainers:
+  - name: Lante Team
+    email: support@qalibrated.co.ke
+dependencies:
+  - name: frontend-service
+    alias: frontendService
+    version: "1.0.0"
+    repository: "file://../frontend-service"
+    condition: frontendService.enabled
+  - name: gateway-service
+    alias: gateway
+    version: "1.0.0"
+    repository: "file://../gateway-service"
+    condition: gateway.enabled
+  - name: user-service
+    alias: userService
+    version: "1.0.0"
+    repository: "file://../user-service"
+    condition: userService.enabled
+  - name: license-service
+    alias: licenseService
+    version: "1.0.0"
+    repository: "file://../license-service"
+    condition: licenseService.enabled
+  - name: ticketing-service
+    alias: ticketingService
+    version: "1.0.0"
+    repository: "file://../ticketing-service"
+    condition: ticketingService.enabled
+  - name: operation-service
+    alias: operationService
+    version: "1.0.0"
+    repository: "file://../operation-service"
+    condition: operationService.enabled
+  - name: crm-service
+    alias: crmService
+    version: "1.0.0"
+    repository: "file://../crm-service"
+    condition: crmService.enabled
+  - name: procurement-service
+    alias: procurementService
+    version: "1.0.0"
+    repository: "file://../procurement-service"
+    condition: procurementService.enabled
+  - name: hr-service
+    alias: hrService
+    version: "1.0.0"
+    repository: "file://../hr-service"
+    condition: hrService.enabled
+  - name: fleet-service
+    alias: fleetService
+    version: "1.0.0"
+    repository: "file://../fleet-service"
+    condition: fleetService.enabled
+  - name: finance-service
+    alias: financeService
+    version: "1.0.0"
+    repository: "file://../finance-service"
+    condition: financeService.enabled
+  - name: reporting-service
+    alias: reportingService
+    version: "1.0.0"
+    repository: "file://../reporting-service"
+    condition: reportingService.enabled
+  - name: store-service
+    alias: storeService
+    version: "1.0.0"
+    repository: "file://../store-service"
+    condition: storeService.enabled
+  - name: hse-service
+    alias: hseService
+    version: "1.0.0"
+    repository: "file://../hse-service"
+    condition: hseService.enabled
+  - name: compliance-service
+    alias: complianceService
+    version: "1.0.0"
+    repository: "file://../compliance-service"
+    condition: complianceService.enabled
+  - name: subcontracts-service
+    alias: subcontractsService
+    version: "1.0.0"
+    repository: "file://../subcontracts-service"
+    condition: subcontractsService.enabled
+  - name: redis
+    version: "25.3.7"
+    repository: "https://charts.bitnami.com/bitnami"
+    condition: redis.enabled
+  - name: postgresql
+    version: "18.5.11"
+    repository: "https://charts.bitnami.com/bitnami"
+    condition: postgresql.enabled

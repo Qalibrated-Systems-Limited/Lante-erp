@@ -1,0 +1,33 @@
+name: Validate Audit Interceptor Coverage
+
+# Tracks which services record WHAT CHANGED (#216), not just that an endpoint was hit. finance's
+# FinanceAuditInterceptor and stores' StoreAuditInterceptor are the reference implementations; every
+# other service is a tracked, named gap in scripts/ci/validate_audit_interceptor_coverage.py's
+# KNOWN_GAPS. This fails only if a baseline entry goes stale (gained coverage but wasn't removed) or a
+# new service is added with no audit interceptor and no baseline entry — not on the gaps that already
+# exist, which would just be #216 restated as a permanently red build.
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - "packages/microservices/**/src/**/*.cs"
+      - "scripts/ci/validate_audit_interceptor_coverage.py"
+      - "scripts/ci/test_validate_audit_interceptor_coverage.py"
+  push:
+    paths:
+      - "packages/microservices/**/src/**/*.cs"
+      - "scripts/ci/validate_audit_interceptor_coverage.py"
+      - "scripts/ci/test_validate_audit_interceptor_coverage.py"
+
+jobs:
+  audit-interceptor-coverage:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run script's own unit tests
+        run: python3 -m unittest test_validate_audit_interceptor_coverage -v
+        working-directory: scripts/ci
+      - name: Validate audit interceptor coverage baseline
+        run: python3 scripts/ci/validate_audit_interceptor_coverage.py

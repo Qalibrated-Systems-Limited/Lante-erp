@@ -1,0 +1,23 @@
+{{- if .Values.backups.enabled }}
+# Local interim durable storage for backup jobs — see backup-logical-dumps-cronjob.yaml's
+# comment on why this exists instead of relying solely on the (not yet provisioned) B2 offsite
+# destination. NOT a substitute for offsite storage: this PVC lives on the same node as
+# everything it backs up, so it protects against accidental deletes/bad migrations, not against
+# node failure. reclaimPolicy is intentionally NOT set to Retain here yet — see issue #200's
+# wider queue for the repo-wide local-path reclaim-policy fix, which applies to this PVC too.
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: lante-backup-storage
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    {{- include "lante-erp-platform.labels" . | nindent 4 }}
+    app.kubernetes.io/name: lante-backup-storage
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: {{ .Values.global.storageClass }}
+  resources:
+    requests:
+      storage: 50Gi
+{{- end }}

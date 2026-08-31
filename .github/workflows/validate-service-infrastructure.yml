@@ -1,0 +1,39 @@
+name: Validate Service Deployment Infrastructure
+
+# Guards against two documented, previously-real failure modes here: a new service shipping a
+# Dockerfile with no build-*.yml workflow (image never builds), or a build workflow whose Helm
+# chart was never wired into deploy-to-kubernetes.yml's case statement or the platform chart's
+# dependency list (image builds, but the cluster never picks it up). See
+# scripts/ci/validate_service_infrastructure.py for the full rationale. Deliberately generic —
+# discovers every real Dockerfile/workflow/chart each run rather than a hardcoded service list.
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - "**/Dockerfile"
+      - ".github/workflows/build-*.yml"
+      - ".github/workflows/deploy-to-kubernetes.yml"
+      - "kubernetes/helm-charts/**"
+      - "scripts/ci/validate_service_infrastructure.py"
+      - "scripts/ci/test_validate_service_infrastructure.py"
+  push:
+    paths:
+      - "**/Dockerfile"
+      - ".github/workflows/build-*.yml"
+      - ".github/workflows/deploy-to-kubernetes.yml"
+      - "kubernetes/helm-charts/**"
+      - "scripts/ci/validate_service_infrastructure.py"
+      - "scripts/ci/test_validate_service_infrastructure.py"
+
+jobs:
+  check-service-infrastructure:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run checker's own unit tests
+        run: python3 -m unittest test_validate_service_infrastructure -v
+        working-directory: scripts/ci
+      - name: Validate actual repo service infrastructure
+        run: python3 scripts/ci/validate_service_infrastructure.py

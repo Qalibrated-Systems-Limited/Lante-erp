@@ -1,0 +1,120 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "hr-service.fullname" . }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "hr-service.labels" . | nindent 4 }}
+spec:
+  {{- if not .Values.autoscaling.enabled }}
+  replicas: {{ .Values.replicaCount }}
+  {{- end }}
+  selector:
+    matchLabels:
+      {{- include "hr-service.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "8080"
+        prometheus.io/path: "/metrics"
+      labels:
+        {{- include "hr-service.selectorLabels" . | nindent 8 }}
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      serviceAccountName: {{ include "hr-service.serviceAccountName" . }}
+      containers:
+      - name: hr-service
+        image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+        imagePullPolicy: {{ .Values.image.pullPolicy }}
+        ports:
+        - name: http
+          containerPort: {{ .Values.service.targetPort }}
+          protocol: TCP
+        startupProbe:
+          httpGet:
+            path: /health
+            port: http
+          failureThreshold: 30
+          periodSeconds: 10
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: http
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: http
+          initialDelaySeconds: 10
+          periodSeconds: 5
+          timeoutSeconds: 3
+          failureThreshold: 3
+        resources:
+          {{- toYaml .Values.resources | nindent 12 }}
+        env:
+          - name: ASPNETCORE_ENVIRONMENT
+            value: "Production"
+          - name: ASPNETCORE_URLS
+            value: "http://+:8080"
+          - name: JWT__Issuer
+            value: "LanteUserService"
+          - name: JWT__Audience
+            value: "LanteUserService"
+          - name: JWT__JwksUrl
+            value: "http://lante-user-service:8080/.well-known/jwks.json"
+          - name: JwtSettings__Issuer
+            value: "LanteUserService"
+          - name: JwtSettings__Audience
+            value: "LanteUserService"
+          # HR owns its schema-per-tenant provisioning; DefaultConnection needs DDL rights
+          # (CREATE SCHEMA + migrations), so it uses the admin connection like the other services.
+          # AppConnection is the least-privilege runtime connection the tenant interceptor uses.
+          - name: ConnectionStrings__DefaultConnection
+            valueFrom:
+              secretKeyRef:
+                name: lante-erp-secrets
+                key: HR_DB_CONNECTION
+          - name: ConnectionStrings__AppConnection
+            valueFrom:
+              secretKeyRef:
+                name: lante-erp-secrets
+                key: HR_APP_CONNECTION
+          - name: InternalServices__ServiceKey
+            valueFrom:
+              secretKeyRef:
+                name: lante-erp-secrets
+                key: INTERNAL_SERVICE_KEY
+
+          # H1 — user-service seam: new-hire login account + department/branch reads.
+          - name: UserService__Enabled
+            value: "true"
+          - name: UserService__BaseUrl
+            value: "http://lante-user-service:8080"
+          # H2 — ticketing alert seam: probation-milestone and contract-expiry alerts.
+          - name: TicketingService__BaseUrl
+            value: "http://lante-ticketing-service:8080"
+          # H5 — finance seam: chart-of-accounts read for salary/statutory/deduction GL mapping
+          # (H6 adds the payroll journal + statutory remittance writes on the same base URL).
+          - name: FinanceService__BaseUrl
+            value: "http://lante-finance-service:8080"
+          # H7 — mandatory-training evidence reads (HR owns the rule, these own the records)
+          - name: HseService__BaseUrl
+            value: "http://lante-hse-service:8080"
+          - name: ComplianceService__BaseUrl
+            value: "http://lante-compliance-service:8080"
+          # H11 — CRM owns the sales target and attainment; HR reads them for commission
+          - name: CrmService__BaseUrl
+            value: "http://lante-crm-service:8080"
+        volumeMounts:
+          - name: tmp
+            mountPath: /tmp
+      volumes:
+        - name: tmp
+          emptyDir: {}

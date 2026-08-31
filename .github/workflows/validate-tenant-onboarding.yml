@@ -1,0 +1,41 @@
+name: Validate Tenant Onboarding Wiring
+
+# Repo-wide safety net, independent of tenant count or which services exist today — reads the
+# actual PlatformServices.Business source of truth and the actual filesystem each run, so it keeps
+# working unmodified as services/tenants are added or removed. See scripts/ci/validate_tenant_onboarding.py
+# for the full rationale: catches a schema-per-tenant service silently never being wired into
+# onboarding (happened to "reporting") or missing config in one environment (happened to "stores"
+# in local dev), before it can repeat for a future service.
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - "packages/microservices/**/InternalProvisioningController.cs"
+      - "packages/microservices/masterdata/user-service/src/UserService.Core/Constants/PlatformServices.cs"
+      - "kubernetes/helm-charts/user-service/templates/deployment.yaml"
+      - "packages/microservices/masterdata/user-service/src/UserService.Api/appsettings.Development.json"
+      - "Deployment/docker-compose.yml"
+      - "scripts/ci/validate_tenant_onboarding.py"
+      - "scripts/ci/test_validate_tenant_onboarding.py"
+  push:
+    paths:
+      - "packages/microservices/**/InternalProvisioningController.cs"
+      - "packages/microservices/masterdata/user-service/src/UserService.Core/Constants/PlatformServices.cs"
+      - "kubernetes/helm-charts/user-service/templates/deployment.yaml"
+      - "packages/microservices/masterdata/user-service/src/UserService.Api/appsettings.Development.json"
+      - "Deployment/docker-compose.yml"
+      - "scripts/ci/validate_tenant_onboarding.py"
+      - "scripts/ci/test_validate_tenant_onboarding.py"
+
+jobs:
+  check-onboarding-wiring:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run script's own unit tests
+        run: python3 -m unittest test_validate_tenant_onboarding -v
+        working-directory: scripts/ci
+      - name: Validate actual repo wiring
+        run: python3 scripts/ci/validate_tenant_onboarding.py

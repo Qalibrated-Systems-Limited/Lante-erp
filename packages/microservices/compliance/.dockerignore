@@ -1,0 +1,24 @@
+# Keep build output out of the image context.
+#
+# There was no .dockerignore anywhere, so every image build shipped this whole service directory —
+# including obj/ and bin/, roughly 100 MB per service and 1.1 GB across the repo. Two costs: the
+# context is uploaded to the daemon on every build, and a stale artifact sitting in bin/ can be copied
+# into the image ahead of the fresh compile that was supposed to replace it.
+#
+# NOTE: .dockerignore is resolved against the BUILD CONTEXT, not the repo root. These builds set
+# context to this service directory, so the file has to live here — one at the repo root has no effect
+# at all. That is why there are sixteen of these; scripts/ci/validate_dockerignore.py asserts they stay
+# identical. See #241.
+**/obj/
+**/bin/
+**/.vs/
+**/*.user
+**/*.lscache
+**/*.DS_Store
+
+# Tests never ship. The image builds src/ only.
+tests/
+
+# Local editor and tooling noise
+.idea/
+.vscode/

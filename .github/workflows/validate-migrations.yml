@@ -1,0 +1,36 @@
+name: Validate Migrations
+
+# Repo-wide safety net for EF Core migrations, independent of which microservice they live in —
+# deliberately not scoped to any one service or tenant so it keeps working as new services/tenants
+# are added. Catches classes of bug that have broken production twice already (fleet-service's
+# AddVehicleClass, stores' AddUnitOfMeasure): md5() is rejected by this cluster's Postgres crypto
+# provider (XX000: could not compute MD5 hash: unsupported), so any migration using it to
+# synthesize a row ID crashes for real data, even if it happened to pass in an environment with no
+# matching rows to hash.
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - "packages/microservices/**/Migrations/**/*.cs"
+  push:
+    paths:
+      - "packages/microservices/**/Migrations/**/*.cs"
+
+jobs:
+  check-migrations:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Block md5() in migration SQL
+        run: |
+          set -e
+          matches=$(grep -rniE "md5\s*\(" --include="*.cs" packages/microservices/*/src/*/Migrations packages/microservices/*/*/src/*/Migrations 2>/dev/null || true)
+          if [ -n "$matches" ]; then
+            echo "::error::Found md5() used in a migration. This cluster's Postgres rejects md5() at runtime (XX000: could not compute MD5 hash: unsupported) — it crashed fleet-service and store-service in production. Use gen_random_uuid()::text instead (built into Postgres core since v13, no extension needed)."
+            echo "$matches"
+            exit 1
+          fi
+          echo "No md5() usage found in migrations."

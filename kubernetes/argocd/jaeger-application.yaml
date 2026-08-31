@@ -1,0 +1,38 @@
+# Bootstrap file — like lante-erp-application.yaml and minio-application.yaml, this is applied
+# manually ONCE (`kubectl apply -f kubernetes/argocd/jaeger-application.yaml`) to register the
+# Application with ArgoCD. It is not itself continuously synced by anything; after this one-time
+# apply, ArgoCD takes over reconciling kubernetes/observability/ against the live cluster.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: lante-jaeger
+  namespace: argocd
+  labels:
+    app.kubernetes.io/name: lante-jaeger
+    app.kubernetes.io/part-of: lante-erp
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/LANTE-AFRICA/Lante-erp.git
+    targetRevision: main
+    path: kubernetes/observability
+    helm:
+      valueFiles:
+        - values.yaml
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: new-erp
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+    retry:
+      limit: 5
+      backoff:
+        duration: 5s
+        factor: 2
+        maxDuration: 3m

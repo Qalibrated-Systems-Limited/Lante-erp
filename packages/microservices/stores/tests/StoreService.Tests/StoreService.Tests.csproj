@@ -1,0 +1,39 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <IsPackable>false</IsPackable>
+    <IsTestProject>true</IsTestProject>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\StoreService.Core\StoreService.Core.csproj" />
+    <ProjectReference Include="..\..\src\StoreService.Infrastructure\StoreService.Infrastructure.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.8.0" />
+    <PackageReference Include="xunit" Version="2.6.3" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="2.5.5">
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+      <PrivateAssets>all</PrivateAssets>
+    </PackageReference>
+    <PackageReference Include="FluentAssertions" Version="6.12.0" />
+    <!-- InMemory, and only for the no-lot issue path. The lot path uses ExecuteUpdateAsync, which this
+         provider does not implement — see the fixture's note. -->
+    <PackageReference Include="Microsoft.EntityFrameworkCore.InMemory" Version="9.0.6" />
+    <!-- For StoreAuditTests: the interceptor adds entities during SavingChanges, and whether those
+         additions are written in the same save is a property of the real save pipeline, not of an
+         in-memory dictionary. Same reasoning as FinanceService.Tests. -->
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="9.0.6" />
+    <!-- Pinned explicitly to unify the graph: Npgsql 9.0.4 (via Infrastructure) pulls Relational
+         9.0.1 while InMemory 9.0.6 pulls 9.0.6, and MSB3277 fails the build on the conflict. Same
+         pin FinanceService.Tests carries. -->
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Relational" Version="9.0.6" />
+    <PackageReference Include="AutoMapper" Version="14.0.0" />
+    <NuGetAuditSuppress Include="https://github.com/advisories/GHSA-rvv3-g6hj-g44x" />
+  </ItemGroup>
+
+</Project>

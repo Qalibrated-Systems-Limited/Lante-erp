@@ -1,0 +1,30 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+  </PropertyGroup>
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.EntityFrameworkCore" Version="9.0.6" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Relational" Version="9.0.6" />
+    <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="9.0.4" />
+    <PackageReference Include="AutoMapper" Version="14.0.0" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\OperationsService.Core\OperationsService.Core.csproj" />
+  </ItemGroup>
+
+  <!-- AutoMapper's DoS vulnerability (GHSA-rvv3-g6hj-g44x, unbounded recursion on deeply
+       self-referential object graphs) is only patched in 15.1.1+/16.1.1+, which require a
+       paid/RPL1.5-licensed release we're deliberately not adopting (staying on the last
+       MIT-licensed 14.x line). Mitigated in code instead: every CreateMap<> in this service's
+       AutoMapper profile(s) was audited and confirmed not to map a genuinely self-referential
+       type graph (see the profile's own review), so the recursion this advisory describes isn't
+       reachable here. Suppressing only this specific advisory, not the whole NU1903 code. -->
+  <ItemGroup>
+    <NuGetAuditSuppress Include="https://github.com/advisories/GHSA-rvv3-g6hj-g44x" />
+  </ItemGroup>
+</Project>

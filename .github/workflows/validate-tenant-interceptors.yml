@@ -1,0 +1,45 @@
+name: Validate Tenant Isolation Interceptors
+
+# The single point of failure for schema-per-tenant data isolation across the whole backend: see
+# scripts/ci/validate_tenant_interceptors.py for the full rationale. Runs on any change to a
+# TenantDbConnectionInterceptor.cs anywhere in the repo, or to the checker/its tests themselves —
+# not scoped to any specific service, so it keeps working unmodified as services are added.
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - "packages/microservices/**/TenantDbConnectionInterceptor.cs"
+      - "packages/microservices/ticketing/tests/TicketingService.Tests/**"
+      - "scripts/ci/validate_tenant_interceptors.py"
+      - "scripts/ci/test_validate_tenant_interceptors.py"
+  push:
+    paths:
+      - "packages/microservices/**/TenantDbConnectionInterceptor.cs"
+      - "packages/microservices/ticketing/tests/TicketingService.Tests/**"
+      - "scripts/ci/validate_tenant_interceptors.py"
+      - "scripts/ci/test_validate_tenant_interceptors.py"
+
+jobs:
+  check-interceptors:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run checker's own unit tests
+        run: python3 -m unittest test_validate_tenant_interceptors -v
+        working-directory: scripts/ci
+      - name: Validate actual repo interceptors
+        run: python3 scripts/ci/validate_tenant_interceptors.py
+
+  run-dotnet-interceptor-tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "8.0.x"
+      - name: Run TicketingService.Tests (canonical interceptor's real runtime behavior)
+        run: dotnet test tests/TicketingService.Tests/TicketingService.Tests.csproj -c Release --filter "FullyQualifiedName~TenantDbConnectionInterceptorTests"
+        working-directory: packages/microservices/ticketing

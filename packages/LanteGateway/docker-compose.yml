@@ -1,0 +1,22 @@
+services:
+  lante-gateway:
+    build:
+      context: ./src/LanteGateway
+      dockerfile: Dockerfile
+    container_name: lante-gateway
+    ports:
+      - "5000:5000"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ASPNETCORE_URLS=http://+:5000
+      - JWT__SecretKey=lante-jwt-super-secret-key-minimum-32-chars
+      - JWT__Issuer=LanteUserService
+      - JWT__Audience=LanteUserService
+    networks:
+      - lante-network
+    restart: unless-stopped
+
+networks:
+  lante-network:
+    external: true
+    name: lante-network

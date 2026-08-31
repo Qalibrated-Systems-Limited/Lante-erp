@@ -1,0 +1,134 @@
+# Kubernetes Dashboard — shared for both qalitrackservices and lante-erp clusters
+# Exposed at: dashboard.qalibrated.co.ke
+#
+# Install the dashboard first:
+#   kubectl apply -f https://raw.githubusercontent.com/kubernetes/dashboard/v2.7.0/aio/deploy/recommended.yaml
+# Then apply this file for the ingress, service account, and token.
+#
+# After installing, patch the deployment for k3s token compatibility:
+#   kubectl patch deployment kubernetes-dashboard -n kubernetes-dashboard --type='json' -p='[
+#     {"op": "add", "path": "/spec/template/spec/containers/0/args/-", "value": "--token-ttl=0"}
+#   ]'
+#
+# Login at https://dashboard.qalibrated.co.ke using the long-lived token:
+#   kubectl get secret admin-user-token -n kubernetes-dashboard -o jsonpath='{.data.token}' | base64 -d
+
+---
+# Admin service account for dashboard access
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: admin-user
+  namespace: kubernetes-dashboard
+  labels:
+    app.kubernetes.io/name: kubernetes-dashboard
+    app.kubernetes.io/part-of: platform
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: admin-user
+  labels:
+    app.kubernetes.io/name: kubernetes-dashboard
+    app.kubernetes.io/part-of: platform
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: cluster-admin
+subjects:
+- kind: ServiceAccount
+  name: admin-user
+  namespace: kubernetes-dashboard
+
+---
+# Grant the kubernetes-dashboard service account cluster-admin so skip-login works with full permissions
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: kubernetes-dashboard-admin
+  labels:
+    app.kubernetes.io/name: kubernetes-dashboard
+    app.kubernetes.io/part-of: platform
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: cluster-admin
+subjects:
+- kind: ServiceAccount
+  name: kubernetes-dashboard
+  namespace: kubernetes-dashboard
+
+---
+# Long-lived token secret for the admin-user
+apiVersion: v1
+kind: Secret
+metadata:
+  name: admin-user-token
+  namespace: kubernetes-dashboard
+  annotations:
+    kubernetes.io/service-account.name: admin-user
+type: kubernetes.io/service-account-token
+
+---
+---
+# BasicAuth secret — credentials for dashboard access
+# Username: admin  Password stored separately (see create-dashboard-secret.sh)
+apiVersion: v1
+kind: Secret
+metadata:
+  name: dashboard-basicauth-secret
+  namespace: kubernetes-dashboard
+type: Opaque
+data:
+  users: YWRtaW46JDJiJDEyJGpGYy9tcVQ4YkVEcy5nY1JlYjQ0dHVnSS5UL3dVWWNGd1dmMXh5emE5V3dRaXFXbXZwS08u
+
+---
+# BasicAuth middleware — Traefik enforces username/password before reaching dashboard
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: dashboard-auth
+  namespace: kubernetes-dashboard
+spec:
+  basicAuth:
+    secret: dashboard-basicauth-secret
+
+---
+# ServersTransport — tells Traefik to skip TLS verification for the dashboard backend
+# (dashboard uses a self-signed cert internally)
+apiVersion: traefik.io/v1alpha1
+kind: ServersTransport
+metadata:
+  name: dashboard-transport
+  namespace: kubernetes-dashboard
+spec:
+  insecureSkipVerify: true
+
+---
+# IngressRoute — Traefik CRD for dashboard at dashboard.qalibrated.co.ke
+# Uses IngressRoute instead of standard Ingress to properly handle the
+# dashboard's self-signed HTTPS backend via ServersTransport
+apiVersion: traefik.io/v1alpha1
+kind: IngressRoute
+metadata:
+  name: kubernetes-dashboard
+  namespace: kubernetes-dashboard
+  labels:
+    app.kubernetes.io/name: kubernetes-dashboard
+    app.kubernetes.io/part-of: platform
+spec:
+  entryPoints:
+    - websecure
+  routes:
+    - match: Host(`dashboard.qalibrated.co.ke`)
+      kind: Rule
+      middlewares:
+        - name: dashboard-auth
+      services:
+        - name: kubernetes-dashboard
+          port: 443
+          scheme: https
+          serversTransport: dashboard-transport
+  tls:
+    secretName: kubernetes-dashboard-tls

@@ -1,0 +1,13 @@
+apiVersion: v2
+name: lante-observability
+description: >
+  Minimal all-in-one Jaeger for distributed tracing (#220). In-memory storage, no HA, no
+  persistence — genuinely disposable: traces do not survive a pod restart. This is the
+  deliberately cheap first step per #220's "decide where traces go" question, mirroring the
+  same cheap-first-step judgment #221 applied to the staging environment. A real backend
+  (Tempo/Jaeger with persistent storage, or a managed option) is a bigger infra commitment
+  than this pass's scope and is left as explicit follow-up, not a starting requirement — see
+  the Chart's own doc comment in values.yaml and #220 for the reasoning.
+type: application
+version: 1.0.0
+appVersion: "1.0.0"

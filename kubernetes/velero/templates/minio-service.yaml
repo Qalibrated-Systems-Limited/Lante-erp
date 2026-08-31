@@ -1,0 +1,19 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: lante-backup-minio
+  namespace: {{ .Values.namespace }}
+  labels:
+    app.kubernetes.io/name: lante-backup-minio
+    app.kubernetes.io/part-of: lante-erp
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: lante-backup-minio
+  ports:
+    - name: s3
+      port: 9000
+      targetPort: s3
+    - name: console
+      port: 9001
+      targetPort: console

@@ -1,0 +1,47 @@
+name: Validate Soft Delete Reachability
+
+# Every service whose BaseEntity carries IsDeleted must have at least one place that sets it.
+#
+# Another form of the #276 pattern, found building that issue's item 1: 14 services declare IsDeleted
+# as the platform's soft-delete convention. finance-service has 21 query filters on it and writes it
+# nowhere — zero delete endpoints exist at all. hr-service had ~100 guards assuming soft delete while
+# its GenericRepository did a real DbSet.Remove (fixed alongside this check landing; only finance
+# remains baselined). See #332.
+#
+# Deliberately NO `if: github.repository ==` guard — a skipped job reports SUCCESS, so once this is a
+# required check a skipped one would still satisfy branch protection. Same reasoning as test-dotnet.yml.
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - "packages/microservices/**/BaseEntity.cs"
+      - "packages/microservices/**/Repositories/**"
+      - "scripts/ci/validate_soft_delete_reachability.py"
+      - "scripts/ci/test_validate_soft_delete_reachability.py"
+      - ".github/workflows/validate-soft-delete-reachability.yml"
+  push:
+    branches: [main]
+    paths:
+      - "packages/microservices/**/BaseEntity.cs"
+      - "packages/microservices/**/Repositories/**"
+      - "scripts/ci/validate_soft_delete_reachability.py"
+      - "scripts/ci/test_validate_soft_delete_reachability.py"
+      - ".github/workflows/validate-soft-delete-reachability.yml"
+
+jobs:
+  soft-delete-reachability:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Run script's own unit tests
+        run: python3 -m unittest test_validate_soft_delete_reachability -v
+        working-directory: scripts/ci
+
+      - name: Check every IsDeleted convention has a live write path
+        run: python3 scripts/ci/validate_soft_delete_reachability.py

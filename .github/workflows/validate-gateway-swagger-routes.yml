@@ -1,0 +1,68 @@
+name: Validate Gateway Swagger Routes
+
+# #225's "Also" section noted crm/hr/procurement/store as missing a /swagger/* route through
+# the gateway. Checking found the routes DO exist, but six of them (those four plus operations
+# and finance) 404 live — yarp.json rewrites `/swagger/<x>/...` down to `/...`, but every one of
+# those services actually serves Swagger at `/swagger/...` in production. Confirmed by curling
+# through the gateway before fixing. fleet-service's differently-shaped rewrite is correct, not
+# a bug — its Program.cs genuinely serves Swagger at its root in every environment.
+#
+# This check derives the expected rewrite per route from that service's own Program.cs rather
+# than assuming one fixed answer, so it doesn't just re-encode the six known-bad cases — it
+# would catch the next service that adds a swagger route with the wrong rewrite too.
+#
+# Deliberately NO `if: github.repository ==` guard — a skipped job reports SUCCESS, so once
+# this is a required check a skipped one would still satisfy branch protection. Same reasoning
+# as test-dotnet.yml, and the same failure #198 exists for.
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - "packages/LanteGateway/src/LanteGateway/yarp.json"
+      - "packages/microservices/**/Program.cs"
+      - "scripts/ci/validate_gateway_swagger_routes.py"
+      - "scripts/ci/test_validate_gateway_swagger_routes.py"
+      - ".github/workflows/validate-gateway-swagger-routes.yml"
+  push:
+      # No branch filter, deliberately. CI now runs on the FORK — the base repo's Actions fail every
+      # run in about a second, which is exhausted minutes rather than a broken build. On the fork a
+      # feature branch produces only a `push` event (the PR is opened against the base repo, so no
+      # `pull_request` event fires here), and with `branches: [main]` that meant a feature branch
+      # triggered almost nothing. Merging unverified again is exactly what #253 was about, in a new
+      # costume. Checks, not builds: the build-and-deploy workflows keep their main-only filter, because
+      # a feature branch must never push an image or deploy.
+    paths:
+      - "packages/LanteGateway/src/LanteGateway/yarp.json"
+      - "packages/microservices/**/Program.cs"
+      - "scripts/ci/validate_gateway_swagger_routes.py"
+      - "scripts/ci/test_validate_gateway_swagger_routes.py"
+      - ".github/workflows/validate-gateway-swagger-routes.yml"
+
+jobs:
+  swagger-routes:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Run script's own unit tests
+        run: python3 -m unittest test_validate_gateway_swagger_routes -v
+        working-directory: scripts/ci
+
+      - name: Check every swagger route's rewrite matches its service's RoutePrefix
+        run: python3 scripts/ci/validate_gateway_swagger_routes.py
+
+      - name: Summary
+        if: always()
+        run: |
+          {
+            echo "### Gateway swagger routes"
+            echo ""
+            echo "Checks that each \`swagger-*-service\` route's YARP PathPattern rewrite matches"
+            echo "what that service's own Program.cs actually serves Swagger at in production."
+            echo "See #225."
+          } >> "$GITHUB_STEP_SUMMARY"

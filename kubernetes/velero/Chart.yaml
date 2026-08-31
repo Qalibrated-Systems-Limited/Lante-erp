@@ -1,0 +1,9 @@
+apiVersion: v2
+name: lante-backup-minio
+description: >
+  Self-hosted, S3-compatible object storage for Velero, used as an interim backup target for
+  the 8 upload PVCs until a real offsite destination (e.g. Backblaze B2) is provisioned. See
+  GitHub issue #200 for the full Tier-0 backup/DR plan this is part of.
+type: application
+version: 1.0.0
+appVersion: "1.0.0"

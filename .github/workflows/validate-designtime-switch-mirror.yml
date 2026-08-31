@@ -1,0 +1,68 @@
+name: Validate Design-Time Switch Mirror
+
+# `dotnet ef` tooling resolves a service's DbContext through its IDesignTimeDbContextFactory,
+# which builds DbContextOptions directly and never executes Program.cs's Main() — so any
+# AppContext.SetSwitch call at the top of Main() (e.g. "Npgsql.EnableLegacyTimestampBehavior",
+# which changes Npgsql's default DateTime column-type mapping) is invisible to every `dotnet ef`
+# command, including `migrations add` and `has-pending-model-changes`.
+#
+# This crashed crm, operations and procurement in production: their EF Core 8->9 bump added a
+# migration that looked correct to every local check (because every check went through the
+# tooling path that never saw the switch) and then failed EF 9's PendingModelChangesWarning the
+# instant the real app tried to apply it. Fixed as a hotfix; this is the guardrail so the next
+# service to add a migration doesn't hit the same wall.
+#
+# Deliberately NO `if: github.repository ==` guard — a skipped job reports SUCCESS, so once
+# this is a required check a skipped one would still satisfy branch protection. Same reasoning
+# as test-dotnet.yml, and the same failure #198 exists for.
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - "packages/microservices/**/Program.cs"
+      - "packages/microservices/**/*DesignTime*.cs"
+      - "scripts/ci/validate_designtime_switch_mirror.py"
+      - "scripts/ci/test_validate_designtime_switch_mirror.py"
+      - ".github/workflows/validate-designtime-switch-mirror.yml"
+  push:
+      # No branch filter, deliberately. CI now runs on the FORK — the base repo's Actions fail every
+      # run in about a second, which is exhausted minutes rather than a broken build. On the fork a
+      # feature branch produces only a `push` event (the PR is opened against the base repo, so no
+      # `pull_request` event fires here), and with `branches: [main]` that meant a feature branch
+      # triggered almost nothing. Merging unverified again is exactly what #253 was about, in a new
+      # costume. Checks, not builds: the build-and-deploy workflows keep their main-only filter, because
+      # a feature branch must never push an image or deploy.
+    paths:
+      - "packages/microservices/**/Program.cs"
+      - "packages/microservices/**/*DesignTime*.cs"
+      - "scripts/ci/validate_designtime_switch_mirror.py"
+      - "scripts/ci/test_validate_designtime_switch_mirror.py"
+      - ".github/workflows/validate-designtime-switch-mirror.yml"
+
+jobs:
+  switch-mirror:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Run script's own unit tests
+        run: python3 -m unittest test_validate_designtime_switch_mirror -v
+        working-directory: scripts/ci
+
+      - name: Check every design-time factory mirrors its Program.cs's AppContext switches
+        run: python3 scripts/ci/validate_designtime_switch_mirror.py
+
+      - name: Summary
+        if: always()
+        run: |
+          {
+            echo "### Design-time switch mirror"
+            echo ""
+            echo "Checks that every AppContext.SetSwitch call in a service's Program.cs is"
+            echo "mirrored in that service's EF Core design-time factories — otherwise"
+            echo "\`dotnet ef\` computes a different model than the running app does."
+          } >> "$GITHUB_STEP_SUMMARY"

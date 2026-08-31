@@ -1,0 +1,35 @@
+name: Validate Kubernetes Manifest Reachability
+
+# Guards against a Kubernetes manifest under kubernetes/ being committed, correct, and never
+# applied because it sits outside every path ArgoCD actually watches (#198). The real incident:
+# kubernetes/backups/cronjob-postgres-backup.yaml was a valid, reviewed CronJob sitting outside
+# lante-erp-application.yaml's spec.source.path, so nothing ever applied it — `kubectl get
+# cronjob -A` returned zero for 40 days. See scripts/ci/validate_kubernetes_manifest_reachability.py
+# for the full rationale and the ALLOWLIST of manifests that are deliberately applied by hand.
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - "kubernetes/**/*.yaml"
+      - "kubernetes/**/*.yml"
+      - "scripts/ci/validate_kubernetes_manifest_reachability.py"
+      - "scripts/ci/test_validate_kubernetes_manifest_reachability.py"
+  push:
+    paths:
+      - "kubernetes/**/*.yaml"
+      - "kubernetes/**/*.yml"
+      - "scripts/ci/validate_kubernetes_manifest_reachability.py"
+      - "scripts/ci/test_validate_kubernetes_manifest_reachability.py"
+
+jobs:
+  check-kubernetes-manifest-reachability:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run checker's own unit tests
+        run: python3 -m unittest test_validate_kubernetes_manifest_reachability -v
+        working-directory: scripts/ci
+      - name: Validate every Kubernetes manifest is reachable or allowlisted
+        run: python3 scripts/ci/validate_kubernetes_manifest_reachability.py

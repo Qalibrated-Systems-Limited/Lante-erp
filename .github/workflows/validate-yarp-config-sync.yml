@@ -1,0 +1,63 @@
+name: Validate YARP Config Sync
+
+# #198: yarp.json exists twice, and the copy that's actually deployed
+# (kubernetes/helm-charts/gateway-service/yarp.json, mounted over /app/yarp.json by the chart's
+# ConfigMap) is not the one a developer naturally edits (packages/LanteGateway/src/LanteGateway/yarp.json,
+# right next to the code). build-gateway-service.yml now auto-syncs the chart copy on every
+# relevant push, so this is the backstop for when that doesn't run — a direct edit to only one
+# copy, or a change to the sync step itself that breaks it.
+#
+# Deliberately NO `if: github.repository ==` guard — a skipped job reports SUCCESS, so once
+# this is a required check a skipped one would still satisfy branch protection. Same reasoning
+# as test-dotnet.yml, and the same failure #198 exists for.
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - "packages/LanteGateway/src/LanteGateway/yarp.json"
+      - "kubernetes/helm-charts/gateway-service/yarp.json"
+      - "scripts/ci/validate_yarp_config_sync.py"
+      - "scripts/ci/test_validate_yarp_config_sync.py"
+      - ".github/workflows/validate-yarp-config-sync.yml"
+  push:
+      # No branch filter, deliberately. CI now runs on the FORK — the base repo's Actions fail every
+      # run in about a second, which is exhausted minutes rather than a broken build. On the fork a
+      # feature branch produces only a `push` event (the PR is opened against the base repo, so no
+      # `pull_request` event fires here), and with `branches: [main]` that meant a feature branch
+      # triggered almost nothing. Merging unverified again is exactly what #253 was about, in a new
+      # costume. Checks, not builds: the build-and-deploy workflows keep their main-only filter, because
+      # a feature branch must never push an image or deploy.
+    paths:
+      - "packages/LanteGateway/src/LanteGateway/yarp.json"
+      - "kubernetes/helm-charts/gateway-service/yarp.json"
+      - "scripts/ci/validate_yarp_config_sync.py"
+      - "scripts/ci/test_validate_yarp_config_sync.py"
+      - ".github/workflows/validate-yarp-config-sync.yml"
+
+jobs:
+  config-sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Run script's own unit tests
+        run: python3 -m unittest test_validate_yarp_config_sync -v
+        working-directory: scripts/ci
+
+      - name: Check the gateway's yarp.json and its Helm-chart copy are in sync
+        run: python3 scripts/ci/validate_yarp_config_sync.py
+
+      - name: Summary
+        if: always()
+        run: |
+          {
+            echo "### YARP config sync"
+            echo ""
+            echo "Checks that \`packages/LanteGateway/src/LanteGateway/yarp.json\` and"
+            echo "\`kubernetes/helm-charts/gateway-service/yarp.json\` (what's actually mounted"
+            echo "into the running gateway) are byte-identical. See #198."
+          } >> "$GITHUB_STEP_SUMMARY"

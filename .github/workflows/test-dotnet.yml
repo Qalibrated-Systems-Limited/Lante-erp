@@ -1,0 +1,157 @@
+name: Tests — .NET
+
+# Until this existed, only 1 of 23 workflows ran `dotnet test` (validate-tenant-interceptors.yml,
+# and only for the interceptor's own tests). The 16 build-*-service.yml workflows built a
+# container and shipped it without running a single test, so every test file in the repo
+# protected nothing: a change breaking TokenServiceTests still reached production. See #214.
+#
+# One workflow rather than a step added to each build workflow, deliberately:
+#   - only 4 of 16 services have tests, so 12 additions would be no-ops that still had to be
+#     maintained
+#   - a test project can reference another service's Core/Infrastructure, so per-service path
+#     filtering would miss the case where a change in service A breaks service B's tests
+#   - one place to look when the suite is red
+#
+# Deliberately NO `if: github.repository == ...` guard, unlike the build-*-service.yml workflows.
+# There it is correct: it stops a fork pushing images to ghcr. These jobs are hermetic — no network,
+# no credentials, no cluster — so there is nothing to guard against, and the guard costs twice over.
+# Today: pushes on the fork where the work happens get no test signal at all. Structurally: a
+# skipped job reports SUCCESS rather than neutral, so once these are required checks, a skipped one
+# still satisfies branch protection — meaning a repo or org rename would turn the whole test gate
+# into a permanent green no-op. That is the same hardcoded-literal-drifts-from-reality failure this
+# comment cites #198 for, so it does not belong here either.
+#
+# Discovery is dynamic. Nothing enumerates test projects by hand here, because a hardcoded list
+# that silently stops matching reality is the exact failure this repo has hit three times
+# (orphaned backup CronJob, diverged yarp.json, drifted database lists) — see #198.
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - "packages/**"
+      - "Directory.Build.props"
+      - "global.json"
+      - ".github/workflows/test-dotnet.yml"
+  push:
+      # No branch filter, deliberately. CI now runs on the FORK — the base repo's Actions fail every
+      # run in about a second, which is exhausted minutes rather than a broken build. On the fork a
+      # feature branch produces only a `push` event (the PR is opened against the base repo, so no
+      # `pull_request` event fires here), and with `branches: [main]` that meant a feature branch
+      # triggered almost nothing. Merging unverified again is exactly what #253 was about, in a new
+      # costume. Checks, not builds: the build-and-deploy workflows keep their main-only filter, because
+      # a feature branch must never push an image or deploy.
+    paths:
+      - "packages/**"
+      - "Directory.Build.props"
+      - "global.json"
+      - ".github/workflows/test-dotnet.yml"
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    # A real PostgreSQL, because three things in finance are invisible to every other provider and
+    # are exactly the guards that stop money posting twice: pg_advisory_xact_lock (no such function
+    # in SQLite), transactions (the in-memory provider has none) and ExecuteUpdateAsync (not
+    # implemented there). See PostgresFixture.
+    #
+    # LANTE_TEST_POSTGRES below is what switches those tests on. Remove it and they SKIP — but
+    # PostgresFixture throws under CI=true rather than skipping, so losing this service fails the
+    # build instead of quietly dropping the double-post coverage. That distinction is the whole
+    # lesson of #214 and #253.
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      LANTE_TEST_POSTGRES: "Host=localhost;Port=5432;Username=postgres;Password=postgres;Database=postgres"
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          # 8.0.400+ is required, not merely preferred. `NuGetAuditSuppress` — which suppresses
+          # the accepted AutoMapper advisory (#193) — needs NuGet 6.11, which ships with the
+          # 8.0.4xx feature band. On an older 8.0.1xx SDK the suppression is silently ignored and
+          # NU1903 is promoted to an error by TreatWarningsAsErrors, so every AutoMapper-using
+          # service fails to build with an error that looks like a dependency problem rather than
+          # an SDK-version one. The guard below turns that into a clear message. See #233.
+          dotnet-version: "8.0.x"
+
+      - name: Check the SDK is new enough to honour NuGetAuditSuppress
+        run: |
+          set -euo pipefail
+          version=$(dotnet --version)
+          echo "SDK: $version"
+          band=$(echo "$version" | cut -d. -f3)
+          major_minor=$(echo "$version" | cut -d. -f1,2)
+          if [ "$major_minor" = "8.0" ] && [ "${band:0:1}" -lt 4 ]; then
+            echo "::error::SDK $version is too old. NuGetAuditSuppress needs NuGet 6.11 (SDK 8.0.400+); on this band the AutoMapper advisory suppression is ignored and NU1903 fails every AutoMapper-using project. See #233."
+            exit 1
+          fi
+
+      - name: Wait for postgres
+        run: |
+          set -euo pipefail
+          # The service container is up before the step runs, but "up" and "accepting connections"
+          # are not the same thing on a cold start.
+          for i in $(seq 1 30); do
+            if pg_isready -h localhost -p 5432 -U postgres >/dev/null 2>&1; then
+              echo "postgres ready after ${i}s"; exit 0
+            fi
+            sleep 1
+          done
+          echo "::error::postgres service never became ready. The advisory-lock tests need it, and CI=true makes them FAIL rather than skip — see PostgresFixture."
+          exit 1
+
+      - name: Discover test projects
+        id: discover
+        run: |
+          set -euo pipefail
+          mapfile -t projects < <(find packages -name '*.Tests.csproj' -not -path '*/obj/*' -not -path '*/bin/*' | sort)
+          if [ ${#projects[@]} -eq 0 ]; then
+            echo "::error::No *.Tests.csproj found anywhere. Either every test project was deleted, or the naming convention changed and this workflow needs updating — either way it must not pass silently."
+            exit 1
+          fi
+          printf '%s\n' "${projects[@]}"
+          printf '%s\n' "${projects[@]}" > /tmp/test-projects.txt
+          echo "count=${#projects[@]}" >> "$GITHUB_OUTPUT"
+
+      - name: Run tests
+        run: |
+          set -euo pipefail
+          failed=0
+          while read -r proj; do
+            echo "::group::$proj"
+            # Two things matter on this line:
+            #   `|| failed=1` — keep going after a failure so one broken suite cannot hide the others.
+            #   `< /dev/null` — dotnet test would otherwise inherit this loop's stdin, which IS the
+            #     project list. A child that reads stdin would consume the remaining entries and the
+            #     rest of the suites would silently never run: a false green in the one place loud
+            #     failure matters most. dotnet test does not read stdin today; this makes it moot.
+            dotnet test "$proj" --nologo --verbosity minimal < /dev/null || failed=1
+            echo "::endgroup::"
+          done < /tmp/test-projects.txt
+          exit $failed
+
+      - name: Summary
+        if: always()
+        run: |
+          echo "### .NET tests" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "Ran **${{ steps.discover.outputs.count }}** test project(s)." >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "12 of 16 services still have no tests at all — see #218 and #230." >> "$GITHUB_STEP_SUMMARY"

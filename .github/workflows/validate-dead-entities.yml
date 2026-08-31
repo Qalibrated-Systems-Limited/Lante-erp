@@ -1,0 +1,61 @@
+name: Validate Dead Entities
+
+# An entity with a table, a migration and a DbSet that no service code ever writes or queries.
+#
+# One form of the pattern in #276: committed, correct-looking, never running. It found FinanceAuditLog —
+# finance had a dedicated audit table from InitialCreate that had never recorded a row (#285) — and
+# ForexRevaluationLog, a revaluation table shipped to every tenant schema that nothing has ever
+# written (#226). Both read as working features to anyone looking at the schema. Seven remain, tracked
+# in #330 and baselined so only NEW ones fail.
+#
+# The detector is deliberately generous about what counts as a use: its first pass flagged 29 entities
+# and the real answer was 8. Shipped then, it would have reported ~70% false positives into CI and been
+# switched off inside a week. If a real use is ever reported dead, WIDEN the patterns rather than adding
+# a baseline entry.
+#
+# Deliberately NO `if: github.repository ==` guard — a skipped job reports SUCCESS, so once this is a
+# required check a skipped one would still satisfy branch protection. Same reasoning as test-dotnet.yml.
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - "packages/microservices/**/*DbContext.cs"
+      - "packages/microservices/**/Entities/**"
+      - "scripts/ci/validate_dead_entities.py"
+      - "scripts/ci/test_validate_dead_entities.py"
+      - ".github/workflows/validate-dead-entities.yml"
+  push:
+      # No branch filter, deliberately. CI now runs on the FORK — the base repo's Actions fail every
+      # run in about a second, which is exhausted minutes rather than a broken build. On the fork a
+      # feature branch produces only a `push` event (the PR is opened against the base repo, so no
+      # `pull_request` event fires here), and with `branches: [main]` that meant a feature branch
+      # triggered almost nothing. Merging unverified again is exactly what #253 was about, in a new
+      # costume. Checks, not builds: the build-and-deploy workflows keep their main-only filter, because
+      # a feature branch must never push an image or deploy.
+    paths:
+      - "packages/microservices/**/*DbContext.cs"
+      - "packages/microservices/**/Entities/**"
+      - "scripts/ci/validate_dead_entities.py"
+      - "scripts/ci/test_validate_dead_entities.py"
+      - ".github/workflows/validate-dead-entities.yml"
+
+jobs:
+  dead-entities:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Run script's own unit tests
+        # Before trusting what it says about the repo. Most of these tests pin a false-positive class from
+        # the 29 -> 8 reduction, so narrowing the patterns later fails loudly rather than quietly
+        # resurrecting the noise that would have got this check disabled.
+        run: python3 -m unittest test_validate_dead_entities -v
+        working-directory: scripts/ci
+
+      - name: Check for entities with a table and no code
+        run: python3 scripts/ci/validate_dead_entities.py

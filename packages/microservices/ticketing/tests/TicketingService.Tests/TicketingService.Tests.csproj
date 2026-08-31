@@ -1,0 +1,47 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <IsPackable>false</IsPackable>
+    <IsTestProject>true</IsTestProject>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\TicketingService.Core\TicketingService.Core.csproj" />
+    <ProjectReference Include="..\..\src\TicketingService.Infrastructure\TicketingService.Infrastructure.csproj" />
+    <!-- Api, for ServiceKeyAuthorizeAttribute. It is the only thing standing between the internal
+         endpoints and the open internet, and it had no tests. -->
+    <ProjectReference Include="..\..\src\TicketingService.Api\TicketingService.Api.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.8.0" />
+    <PackageReference Include="xunit" Version="2.6.3" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="2.5.5">
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+      <PrivateAssets>all</PrivateAssets>
+    </PackageReference>
+    <PackageReference Include="Moq" Version="4.20.70" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.InMemory" Version="9.0.6" />
+    <!-- SQLite for the alert-dedup tests. InMemory does NOT enforce unique indexes, so the partial
+         unique index that closes the #219 race would be invisible to it — a test on InMemory would pass
+         whether or not the index exists, which is the opposite of what these tests are for. -->
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="9.0.6" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Relational" Version="9.0.6" />
+    <PackageReference Include="AutoMapper" Version="14.0.0" />
+    <PackageReference Include="FluentAssertions" Version="6.12.0" />
+  </ItemGroup>
+
+  <!-- AutoMapper's DoS vulnerability (GHSA-rvv3-g6hj-g44x, unbounded recursion on deeply
+       self-referential object graphs) is only patched in 15.1.1+/16.1.1+, which require a
+       paid/RPL1.5-licensed release we're deliberately not adopting (staying on the last
+       MIT-licensed 14.x line). Mitigated in code instead: every CreateMap<> in this service's
+       AutoMapper profile(s) was audited and confirmed not to map a genuinely self-referential
+       type graph (see the profile's own review), so the recursion this advisory describes isn't
+       reachable here. Suppressing only this specific advisory, not the whole NU1903 code. -->
+  <ItemGroup>
+    <NuGetAuditSuppress Include="https://github.com/advisories/GHSA-rvv3-g6hj-g44x" />
+  </ItemGroup>
+</Project>

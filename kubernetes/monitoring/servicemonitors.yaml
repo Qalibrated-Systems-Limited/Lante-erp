@@ -1,0 +1,117 @@
+# ServiceMonitors for Lante microservices
+# Plugs into the existing Prometheus stack on qalibrated.co.ke
+# Apply: kubectl apply -f servicemonitors.yaml -n new-erp
+
+---
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: lante-gateway
+  namespace: new-erp
+  labels:
+    app.kubernetes.io/name: lante-gateway
+    app.kubernetes.io/part-of: lante-erp
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: gateway-service
+  endpoints:
+  - port: http
+    path: /metrics
+    interval: 30s
+    scrapeTimeout: 10s
+
+---
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: lante-user-service
+  namespace: new-erp
+  labels:
+    app.kubernetes.io/name: lante-user-service
+    app.kubernetes.io/part-of: lante-erp
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: user-service
+  endpoints:
+  - port: http
+    path: /metrics
+    interval: 30s
+    scrapeTimeout: 10s
+
+---
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: lante-license-service
+  namespace: new-erp
+  labels:
+    app.kubernetes.io/name: lante-license-service
+    app.kubernetes.io/part-of: lante-erp
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: license-service
+  endpoints:
+  - port: http
+    path: /metrics
+    interval: 30s
+    scrapeTimeout: 10s
+
+---
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: lante-ticketing-service
+  namespace: new-erp
+  labels:
+    app.kubernetes.io/name: lante-ticketing-service
+    app.kubernetes.io/part-of: lante-erp
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: ticketing-service
+  endpoints:
+  - port: http
+    path: /metrics
+    interval: 30s
+    scrapeTimeout: 10s
+
+---
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: lante-operation-service
+  namespace: new-erp
+  labels:
+    app.kubernetes.io/name: lante-operation-service
+    app.kubernetes.io/part-of: lante-erp
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: operation-service
+  endpoints:
+  - port: http
+    path: /metrics
+    interval: 30s
+    scrapeTimeout: 10s
+
+---
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: lante-fleet-service
+  namespace: new-erp
+  labels:
+    app.kubernetes.io/name: lante-fleet-service
+    app.kubernetes.io/part-of: lante-erp
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: fleet-service
+  endpoints:
+  - port: http
+    path: /metrics
+    interval: 30s
+    scrapeTimeout: 10s

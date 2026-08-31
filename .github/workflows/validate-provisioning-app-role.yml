@@ -1,0 +1,42 @@
+name: Validate Provisioning App Role
+
+# Guards the runtime Postgres role that tenant provisioning grants on each newly created
+# tenant_<slug> schema. Found on 2026-08-18 (#196): ProvisioningAppRole is configured
+# nowhere, so every service falls back to a hardcoded default — and 7 of 14 defaulted to
+# `lante_app`, a role that has never existed, while the rest correctly said `qalicore_app`.
+# Granting to a nonexistent role makes provisioning fail for those services, so half the
+# platform could not onboard a company. See scripts/ci/validate_provisioning_app_role.py
+# for the full rationale, including why renaming the role for real is a privilege
+# migration rather than a string change.
+#
+# Widened for #198: the original glob/regex only matched TenantProvisioningService.cs's
+# `_configuration["ProvisioningAppRole"]` spelling, missing UserService.Api/Program.cs's
+# `builder.Configuration["ProvisioningAppRole"] ?? "lante_app"` — the exact #196 bug, live
+# and unfixed in a file this check never looked at. Now globs every .cs file.
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - "packages/microservices/**/*.cs"
+      - "kubernetes/secrets/generate-secrets.sh"
+      - "scripts/ci/validate_provisioning_app_role.py"
+      - "scripts/ci/test_validate_provisioning_app_role.py"
+  push:
+    paths:
+      - "packages/microservices/**/*.cs"
+      - "kubernetes/secrets/generate-secrets.sh"
+      - "scripts/ci/validate_provisioning_app_role.py"
+      - "scripts/ci/test_validate_provisioning_app_role.py"
+
+jobs:
+  check-provisioning-app-role:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run script's own unit tests
+        run: python3 -m unittest test_validate_provisioning_app_role -v
+        working-directory: scripts/ci
+      - name: Validate provisioning app role against generate-secrets.sh
+        run: python3 scripts/ci/validate_provisioning_app_role.py

@@ -1,0 +1,44 @@
+{{- if .Values.backups.enabled }}
+# Grants user-service's own pod (its existing ServiceAccount — not the `lante-backup` one the
+# CronJobs run as) enough Kubernetes API access to power the Platform Admin backups control
+# page: list/read job status, and manually trigger a run. RBAC's `create` verb can't be scoped to
+# specific Job *names*, so it can't stop this ServiceAccount from creating an arbitrarily-named
+# Job — the application layer enforces its own allowlist of the 4 known backup CronJob names
+# (see KubernetesBackupOperationsService.KnownCronJobNames); this Role only bounds the namespace
+# and resource types.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: lante-user-service-backups-admin
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    {{- include "lante-erp-platform.labels" . | nindent 4 }}
+    app.kubernetes.io/name: lante-user-service-backups-admin
+rules:
+  - apiGroups: ["batch"]
+    resources: ["cronjobs"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: ["batch"]
+    resources: ["jobs"]
+    verbs: ["get", "list", "watch", "create"]
+  - apiGroups: [""]
+    resources: ["pods"]
+    verbs: ["get", "list", "watch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: lante-user-service-backups-admin
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    {{- include "lante-erp-platform.labels" . | nindent 4 }}
+    app.kubernetes.io/name: lante-user-service-backups-admin
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: lante-user-service-backups-admin
+subjects:
+  - kind: ServiceAccount
+    name: {{ include "user-service.serviceAccountName" .Subcharts.userService }}
+    namespace: {{ .Values.global.namespace }}
+{{- end }}

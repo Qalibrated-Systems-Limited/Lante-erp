@@ -1,0 +1,20 @@
+# Keep dependencies and build output out of the image context.
+#
+# node_modules alone is ~228 MB and the image installs its own from the lockfile, so shipping it wastes
+# the upload and risks a host-built native module reaching a different base image. dist/ is rebuilt
+# inside the image; copying a stale one in is how a "fixed" bundle turns out to be yesterday's.
+#
+# NOTE: .dockerignore is resolved against the BUILD CONTEXT, not the repo root — this build's context is
+# apps/lante_frontend, so the file has to live here. See #241.
+node_modules/
+dist/
+build/
+
+# Test output — not needed to build, and playwright-report can be large
+playwright-report/
+test-results/
+coverage/
+
+**/*.DS_Store
+.idea/
+.vscode/

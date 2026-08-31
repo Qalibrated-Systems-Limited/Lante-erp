@@ -1,0 +1,53 @@
+version: "3.9"
+
+services:
+  postgres-fleet:
+    image: postgres:15
+    container_name: fleet-postgres
+    ports:
+      - "5439:5432"
+    environment:
+      POSTGRES_DB: lante_fleetservice
+      POSTGRES_USER: lante_user
+      POSTGRES_PASSWORD: lante_pass
+    volumes:
+      - fleet_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U lante_user -d lante_fleetservice"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  fleet-service:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: fleet-service-dev
+    ports:
+      - "8085:8080"
+    depends_on:
+      postgres-fleet:
+        condition: service_healthy
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ASPNETCORE_URLS=http://+:8080
+      - ConnectionStrings__DefaultConnection=Host=postgres-fleet;Port=5432;Database=lante_fleetservice;Username=lante_user;Password=lante_pass
+      - JWT__SecretKey=6dUy6RIA6jg7+NfqYMvcCmzOEApr9vbmf3HttC/uDR2BJ/HszFCOXEpbPezQ6fMS
+      - JWT_SECRET_KEY=6dUy6RIA6jg7+NfqYMvcCmzOEApr9vbmf3HttC/uDR2BJ/HszFCOXEpbPezQ6fMS
+      - JWT__Issuer=LanteUserService
+      - JWT__Audience=LanteUserService
+      - TicketingService__BaseUrl=http://localhost:8082
+      - InternalServices__ServiceKey=lante-internal-service-key-2024
+      - Storage__BasePath=/app/uploads
+      - Storage__BaseUrl=http://localhost:5000
+    volumes:
+      - ./uploads:/app/uploads
+    restart: unless-stopped
+
+volumes:
+  fleet_postgres_data:
+
+networks:
+  default:
+    name: fleet-dev-network

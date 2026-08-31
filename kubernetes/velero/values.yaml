@@ -1,0 +1,15 @@
+namespace: new-erp
+storageClass: local-path
+minio:
+  image: "docker.io/minio/minio:RELEASE.2025-09-07T16-13-09Z"
+  mcImage: "docker.io/minio/mc:RELEASE.2025-08-13T08-35-41Z"
+  kubectlImage: "docker.io/bitnami/kubectl:latest"
+  # Both consumers of this shared, self-hosted, interim (pre-B2) S3 target: Velero (upload
+  # PVCs) and pgBackRest (Postgres physical backup + WAL archiving, see GitHub issue #200 PR 5).
+  bucketNames:
+    - "lante-velero-uploads"
+    - "lante-pgbackrest"
+  persistence:
+    # Bumped from 30Gi to make room for pgBackRest's physical backups + WAL alongside Velero's
+    # upload-PVC backups in the same instance.
+    size: 60Gi

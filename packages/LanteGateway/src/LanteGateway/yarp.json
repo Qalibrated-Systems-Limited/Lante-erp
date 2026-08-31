@@ -1,0 +1,3577 @@
+{
+  "ReverseProxy": {
+    "Routes": {
+      "user-auth-login": {
+        "ClusterId": "cluster-lante-user-service",
+        "Match": {
+          "Path": "/api/v1/auth/login",
+          "Methods": [
+            "POST"
+          ]
+        },
+        "AuthorizationPolicy": "Anonymous",
+        "RateLimiterPolicy": "rl-20-per-min"
+      },
+      "user-auth-verify-2fa": {
+        "ClusterId": "cluster-lante-user-service",
+        "Match": {
+          "Path": "/api/v1/auth/verify-2fa",
+          "Methods": [
+            "POST"
+          ]
+        },
+        "AuthorizationPolicy": "Anonymous",
+        "RateLimiterPolicy": "rl-20-per-min"
+      },
+      "user-auth-google-login": {
+        "ClusterId": "cluster-lante-user-service",
+        "Match": {
+          "Path": "/api/v1/auth/google-login",
+          "Methods": [
+            "POST"
+          ]
+        },
+        "AuthorizationPolicy": "Anonymous",
+        "RateLimiterPolicy": "rl-20-per-min"
+      },
+      "user-auth-update-password": {
+        "ClusterId": "cluster-lante-user-service",
+        "Match": {
+          "Path": "/api/v1/auth/update-password/{**catch-all}",
+          "Methods": [
+            "PUT"
+          ]
+        },
+        "AuthorizationPolicy": "Anonymous",
+        "RateLimiterPolicy": "rl-20-per-min"
+      },
+      "user-auth-get-invite": {
+        "ClusterId": "cluster-lante-user-service",
+        "Match": {
+          "Path": "/api/v1/auth/invite/{token}",
+          "Methods": [
+            "GET"
+          ]
+        },
+        "AuthorizationPolicy": "Anonymous",
+        "RateLimiterPolicy": "rl-20-per-min"
+      },
+      "user-auth-accept-invite": {
+        "ClusterId": "cluster-lante-user-service",
+        "Match": {
+          "Path": "/api/v1/auth/accept-invite",
+          "Methods": [
+            "POST"
+          ]
+        },
+        "AuthorizationPolicy": "Anonymous",
+        "RateLimiterPolicy": "rl-20-per-min"
+      },
+      "user-auth-logout": {
+        "ClusterId": "cluster-lante-user-service",
+        "Match": {
+          "Path": "/api/v1/auth/logout",
+          "Methods": [
+            "POST"
+          ]
+        },
+        "AuthorizationPolicy": "Default"
+      },
+      "user-auth-change-password": {
+        "ClusterId": "cluster-lante-user-service",
+        "Match": {
+          "Path": "/api/v1/auth/change-password",
+          "Methods": [
+            "POST"
+          ]
+        },
+        "AuthorizationPolicy": "Default"
+      },
+      "user-service-users": {
+        "ClusterId": "cluster-lante-user-service",
+        "Match": {
+          "Path": "/api/v1/users/{**catch-all}",
+          "Methods": [
+            "GET",
+            "POST",
+            "PUT",
+            "PATCH",
+            "DELETE"
+          ]
+        },
+        "AuthorizationPolicy": "Default"
+      },
+      "user-service-roles": {
+        "ClusterId": "cluster-lante-user-service",
+        "Match": {
+          "Path": "/api/v1/roles/{**catch-all}",
+          "Methods": [
+            "GET",
+            "POST",
+            "PUT",
+            "PATCH",
+            "DELETE"
+          ]
+        },
+        "AuthorizationPolicy": "Default"
+      },
+      "user-service-permissions": {
+        "ClusterId": "cluster-lante-user-service",
+        "Match": {
+          "Path": "/api/v1/permissions/{**catch-all}",
+          "Methods": [
+            "GET",
+            "POST",
+            "PUT",
+            "PATCH",
+            "DELETE"
+          ]
+        },
+        "AuthorizationPolicy": "Default"
+      },
+      "user-service-departments": {
+        "ClusterId": "cluster-lante-user-service",
+        "Match": {
+          "Path": "/api/v1/departments/{**catch-all}",
+          "Methods": [
+            "GET",
+            "POST",
+            "PUT",
+            "PATCH",
+            "DELETE"
+          ]
+        },
+        "AuthorizationPolicy": "Default"
+      },
+      "user-service-password-policy": {
+        "ClusterId": "cluster-lante-user-service",
+        "Match": {
+          "Path": "/api/v1/password-policy/{**catch-all}",
+          "Methods": [
+            "GET",
+            "POST",
+            "PUT",
+            "PATCH",
+            "DELETE"
+          ]
+        },
+        "AuthorizationPolicy": "Default"
+      },
+      "user-service-system-settings": {
+        "ClusterId": "cluster-lante-user-service",
+        "Match": {
+          "Path": "/api/v1/system-settings/{**catch-all}",
+          "Methods": [
+            "GET",
+            "PUT",
+            "POST"
+          ]
+        },
+        "AuthorizationPolicy": "Default"
+      },
+      "user-service-system-settings-root": {
+        "ClusterId": "cluster-lante-user-service",
+        "Match": {
+          "Path": "/api/v1/system-settings",
+          "Methods": [
+            "GET",
+            "PUT"
+          ]
+        },
+        "AuthorizationPolicy": "Default"
+      },
+      "user-service-system-modules-root": {
+        "ClusterId": "cluster-lante-user-service",
+        "Match": {
+          "Path": "/api/v1/system-modules",
+          "Methods": [
+            "GET"
+          ]
+        },
+        "AuthorizationPolicy": "Default"
+      },
+      "user-service-system-modules": {
+        "ClusterId": "cluster-lante-user-service",
+        "Match": {
+          "Path": "/api/v1/system-modules/{**catch-all}",
+          "Methods": [
+            "GET",
+            "PUT"
+          ]
+        },
+        "AuthorizationPolicy": "Default"
+      },
+      "user-service-document-templates-root": {
+        "ClusterId": "cluster-lante-user-service",
+        "Match": {
+          "Path": "/api/v1/document-templates",
+          "Methods": [
+            "GET"
+          ]
+        },
+        "AuthorizationPolicy": "Default"
+      },
+      "user-service-document-templates": {
+        "ClusterId": "cluster-lante-user-service",
+        "Match": {
+          "Path": "/api/v1/document-templates/{**catch-all}",
+          "Methods": [
+            "GET",
+            "PUT"
+          ]
+        },
+        "AuthorizationPolicy": "Default"
+      },
+      "user-service-audit-log": {
+        "ClusterId": "cluster-lante-user-service",
+        "Match": {
+          "Path": "/api/v1/audit-log",
+          "Methods": [
+            "GET"
+          ]
+        },
+        "AuthorizationPolicy": "Default"
+      },
+      "crm-service-audit-log": {
+        "ClusterId": "cluster-lante-crm-service",
+        "Match": {
+          "Path": "/api/v1/crm-audit-log",
+          "Methods": [
+            "GET"
+          ]
+        },
+        "AuthorizationPolicy": "Default"
+      },
+      "store-service-audit-log": {
+        "ClusterId": "cluster-lante-store-service",
+        "Match": {
+          "Path": "/api/v1/stores-audit-log",
+          "Methods": [
+            "GET"
+          ]
+        },
+        "AuthorizationPolicy": "Default"
+      },
+      "fleet-service-audit-log": {
+        "ClusterId": "cluster-lante-fleet-service",
+        "Match": {
+          "Path": "/api/v1/fleet-audit-log",
+          "Methods": [
+            "GET"
+          ]
+        },
+        "AuthorizationPolicy": "Default"
+      },
+      "compliance-service-audit-log": {
+        "ClusterId": "cluster-lante-compliance-service",
+        "Match": {
+          "Path": "/api/v1/compliance-audit-log",
+          "Methods": [
+            "GET"
+          ]
+        },
+        "AuthorizationPolicy": "Default"
+      },
+      "hse-service-audit-log": {
+        "ClusterId": "cluster-lante-hse-service",
+        "Match": {
+          "Path": "/api/v1/hse-audit-log",
+          "Methods": [
+            "GET"
+          ]
+        },
+        "AuthorizationPolicy": "Default"
+      },
+      "license-service-audit-log": {
+        "ClusterId": "cluster-lante-license-service",
+        "Match": {
+          "Path": "/api/v1/licensing-audit-log",
+          "Methods": [
+            "GET"
+          ]
+        },
+        "AuthorizationPolicy": "Default"
+      },
+      "subcontracts-service-audit-log": {
+        "ClusterId": "cluster-lante-subcontracts-service",
+        "Match": {
+          "Path": "/api/v1/subcontracts-audit-log",
+          "Methods": [
+            "GET"
+          ]
+        },
+        "AuthorizationPolicy": "Default"
+      },
+      "ticketing-service-audit-log": {
+        "ClusterId": "cluster-lante-ticketing-service",
+        "Match": {
+          "Path": "/api/v1/ticketing-audit-log",
+          "Methods": [
+            "GET"
+          ]
+        },
+        "AuthorizationPolicy": "Default"
+      },
+      "ticketing-service-notifications-read-all": {
+        "ClusterId": "cluster-lante-ticketing-service",
+        "Match": {
+          "Path": "/api/v1/notifications/read-all",
+          "Methods": [
+            "PATCH"
+          ]
+        },
+        "AuthorizationPolicy": "Default"
+      },
+      "ticketing-service-notifications-mark-read": {
+        "ClusterId": "cluster-lante-ticketing-service",
+        "Match": {
+          "Path": "/api/v1/notifications/{id}/read",
+          "Methods": [
+            "PATCH"
+          ]
+        },
+        "AuthorizationPolicy": "Default"
+      },
+      "ticketing-service-notifications-unread-count": {
+        "ClusterId": "cluster-lante-ticketing-service",
+        "Match": {
+          "Path": "/api/v1/notifications/unread-count",
+          "Methods": [
+            "GET"
+          ]
+        },
+        "AuthorizationPolicy": "Default"
+      },
+      "ticketing-service-notifications-mark-unread": {
+        "ClusterId": "cluster-lante-ticketing-service",
+        "Match": {
+          "Path": "/api/v1/notifications/{id}/unread",
+          "Methods": [
+            "PATCH"
+          ]
+        },
+        "AuthorizationPolicy": "Default"
+      },
+      "ticketing-service-notifications": {
+        "ClusterId": "cluster-lante-ticketing-service",
+        "Match": {
+          "Path": "/api/v1/notifications",
+          "Methods": [
+            "GET"
+          ]
+        },
+        "AuthorizationPolicy": "Default"
+      },
+      "ticketing-service-alerts": {
+        "ClusterId": "cluster-lante-ticketing-service",
+        "Match": {
+          "Path": "/api/v1/alerts",
+          "Methods": [
+            "GET"
+          ]
+        },
+        "AuthorizationPolicy": "Default"
+      },
+      "ticketing-service-alerts-history": {
+        "ClusterId": "cluster-lante-ticketing-service",
+        "Match": {
+          "Path": "/api/v1/alerts/history",
+          "Methods": [
+            "GET"
+          ]
+        },
+        "AuthorizationPolicy": "Default"
+      },
+      "ticketing-service-alerts-seen": {
+        "ClusterId": "cluster-lante-ticketing-service",
+        "Match": {
+          "Path": "/api/v1/alerts/{id}/seen",
+          "Methods": [
+            "PATCH"
+          ]
+        },
+        "AuthorizationPolicy": "Default"
+      },
+      "ticketing-service-alerts-acknowledge": {
+        "ClusterId": "cluster-lante-ticketing-service",
+        "Match": {
+          "Path": "/api/v1/alerts/{id}/acknowledge",
+          "Methods": [
+            "PATCH"
+          ]
+        },
+        "AuthorizationPolicy": "Default"
+      },
+      "ticketing-service-dashboard": {
+        "ClusterId": "cluster-lante-ticketing-service",
+        "Match": {
+          "Path": "/api/v1/tickets/dashboard/{**catch-all}",
+          "Methods": [
+            "GET"
+          ]
+        },
+        "AuthorizationPolicy": "Default"
+      },
+      "ticketing-service-tickets": {
+        "ClusterId": "cluster-lante-ticketing-service",
+        "Match": {
+          "Path": "/api/v1/tickets/{**catch-all}",
+          "Methods": [
+            "GET",
+            "POST",
+            "PUT",
+            "PATCH",
+            "DELETE"
+          ]
+        },
+        "AuthorizationPolicy": "Default"
+      },
+      "ticketing-service-categories": {
+        "ClusterId": "cluster-lante-ticketing-service",
+        "Match": {
+          "Path": "/api/v1/ticket-categories/{**catch-all}",
+          "Methods": [
+            "GET",
+            "POST",
+            "PUT",
+            "PATCH",
+            "DELETE"
+          ]
+        },
+        "AuthorizationPolicy": "Default"
+      },
+      "ticketing-service-tags-base": {
+        "ClusterId": "cluster-lante-ticketing-service",
+        "Match": {
+          "Path": "/api/v1/tags",
+          "Methods": [
+            "GET",
+            "POST"
+          ]
+        },
+        "AuthorizationPolicy": "Default"
+      },
+      "ticketing-service-tags": {
+        "ClusterId": "cluster-lante-ticketing-service",
+        "Match": {
+          "Path": "/api/v1/tags/{**catch-all}",
+          "Methods": [
+            "GET",
+            "POST",
+            "PUT",
+            "PATCH",
+            "DELETE"
+          ]
+        },
+        "AuthorizationPolicy": "Default"
+      },
+      "ticketing-service-macros-base": {
+        "ClusterId": "cluster-lante-ticketing-service",
+        "Match": {
+          "Path": "/api/v1/macros",
+          "Methods": [
+            "GET",
+            "POST"
+          ]
+        },
+        "AuthorizationPolicy": "Default"
+      },
+      "ticketing-service-macros": {
+        "ClusterId": "cluster-lante-ticketing-service",
+        "Match": {
+          "Path": "/api/v1/macros/{**catch-all}",
+          "Methods": [
+            "GET",
+            "POST",
+            "PUT",
+            "PATCH",
+            "DELETE"
+          ]
+        },
+        "AuthorizationPolicy": "Default"
+      },
+      "ticketing-service-workflow-base": {
+        "ClusterId": "cluster-lante-ticketing-service",
+        "Match": {
+          "Path": "/api/v1/workflow-rules",
+          "Methods": [
+            "GET",
+            "POST"
+          ]
+        },
+        "AuthorizationPolicy": "Default"
+      },
+      "ticketing-service-workflow": {
+        "ClusterId": "cluster-lante-ticketing-service",
+        "Match": {
+          "Path": "/api/v1/workflow-rules/{**catch-all}",
+          "Methods": [
+            "GET",
+            "POST",
+            "PUT",
+            "PATCH",
+            "DELETE"
+          ]
+        },
+        "AuthorizationPolicy": "Default"
+      },
+      "ticketing-service-escalation-rules-base": {
+        "ClusterId": "cluster-lante-ticketing-service",
+        "Match": {
+          "Path": "/api/v1/escalation-rules",
+          "Methods": [
+            "GET",
+            "POST"
+          ]
+        },
+        "AuthorizationPolicy": "Default"
+      },
+      "ticketing-service-escalation-rules": {
+        "ClusterId": "cluster-lante-ticketing-service",
+        "Match": {
+          "Path": "/api/v1/escalation-rules/{**catch-all}",
+          "Methods": [
+            "GET",
+            "POST",
+            "PUT",
+            "DELETE"
+          ]
+        },
+        "AuthorizationPolicy": "Default"
+      },
+      "ticketing-service-sla-base": {
+        "ClusterId": "cluster-lante-ticketing-service",
+        "Match": {
+          "Path": "/api/v1/sla-policies",
+          "Methods": [
+            "GET",
+            "POST"
+          ]
+        },
+        "AuthorizationPolicy": "Default"
+      },
+      "ticketing-service-sla": {
+        "ClusterId": "cluster-lante-ticketing-service",
+        "Match": {
+          "Path": "/api/v1/sla-policies/{**catch-all}",
+          "Methods": [
+            "GET",
+            "POST",
+            "PUT",
+            "DELETE"
+          ]
+        },
+        "AuthorizationPolicy": "Default"
+      },
+      "operation-projects-base": {
+        "ClusterId": "cluster-lante-operation-service",
+        "Match": {
+          "Path": "/api/v1/projects",
+          "Methods": [
+            "GET",
+            "POST"
+          ]
+        },
+        "AuthorizationPolicy": "Default"
+      },
+      "operation-projects": {
+        "ClusterId": "cluster-lante-operation-service",
+        "Match": {
+          "Path": "/api/v1/projects/{**catch-all}",
+          "Methods": [
+            "GET",
+            "POST",
+            "PUT",
+            "PATCH",
+            "DELETE"
+          ]
+        },
+        "AuthorizationPolicy": "Default"
+      },
+      "license-service-validate": {
+        "ClusterId": "cluster-lante-license-service",
+        "Match": {
+          "Path": "/api/v1/licenses/validate",
+          "Methods": [
+            "POST"
+          ]
+        },
+        "AuthorizationPolicy": "Anonymous",
+        "RateLimiterPolicy": "rl-60-per-min"
+      },
+      "license-service-admin": {
+        "ClusterId": "cluster-lante-license-service",
+        "Match": {
+          "Path": "/api/v1/licenses/{**catch-all}",
+          "Methods": [
+            "GET",
+            "POST",
+            "DELETE"
+          ]
+        },
+        "AuthorizationPolicy": "Default"
+      },
+      "ticketing-service-requests-base": {
+        "ClusterId": "cluster-lante-operation-service",
+        "Match": {
+          "Path": "/api/v1/service-requests",
+          "Methods": [
+            "GET",
+            "POST"
+          ]
+        },
+        "AuthorizationPolicy": "Default"
+      },
+      "ticketing-service-requests": {
+        "ClusterId": "cluster-lante-operation-service",
+        "Match": {
+          "Path": "/api/v1/service-requests/{**catch-all}",
+          "Methods": [
+            "GET",
+            "POST",
+            "PUT",
+            "PATCH",
+            "DELETE"
+          ]
+        },
+        "AuthorizationPolicy": "Default"
+      },
+      "ticketing-service-internal-work-update": {
+        "ClusterId": "cluster-lante-ticketing-service",
+        "Match": {
+          "Path": "/api/v1/internal/work-update",
+          "Methods": [
+            "POST"
+          ]
+        },
+        "AuthorizationPolicy": "Default"
+      },
+      "ticketing-service-portal": {
+        "ClusterId": "cluster-lante-ticketing-service",
+        "Match": {
+          "Path": "/api/v1/portal/{**catch-all}",
+          "Methods": [
+            "GET",
+            "POST"
+          ]
+        },
+        "AuthorizationPolicy": "Anonymous",
+        "RateLimiterPolicy": "rl-30-per-min"
+      },
+      "ticketing-service-uploads": {
+        "ClusterId": "cluster-lante-ticketing-service",
+        "Match": {
+          "Path": "/uploads/ticket-attachments/{**catch-all}",
+          "Methods": [
+            "GET"
+          ]
+        },
+        "AuthorizationPolicy": "Anonymous",
+        "Order": -10
+      },
+      "fleet-uploads-expenses": {
+        "ClusterId": "cluster-lante-fleet-service",
+        "Match": {
+          "Path": "/uploads/expenses/{**catch-all}",
+          "Methods": [
+            "GET"
+          ]
+        },
+        "AuthorizationPolicy": "Anonymous",
+        "Order": -10
+      },
+      "fleet-uploads-materials": {
+        "ClusterId": "cluster-lante-fleet-service",
+        "Match": {
+          "Path": "/uploads/materials/{**catch-all}",
+          "Methods": [
+            "GET"
+          ]
+        },
+        "AuthorizationPolicy": "Anonymous",
+        "Order": -10
+      },
+      "fleet-uploads-drivers": {
+        "ClusterId": "cluster-lante-fleet-service",
+        "Match": {
+          "Path": "/uploads/drivers/{**catch-all}",
+          "Methods": [
+            "GET"
+          ]
+        },
+        "AuthorizationPolicy": "Anonymous",
+        "Order": -10
+      },
+      "fleet-uploads-trips": {
+        "ClusterId": "cluster-lante-fleet-service",
+        "Match": {
+          "Path": "/uploads/trips/{**catch-all}",
+          "Methods": [
+            "GET"
+          ]
+        },
+        "AuthorizationPolicy": "Anonymous",
+        "Order": -10
+      },
+      "fleet-uploads-field-vehicles": {
+        "ClusterId": "cluster-lante-fleet-service",
+        "Match": {
+          "Path": "/uploads/field-vehicles/{**catch-all}",
+          "Methods": [
+            "GET"
+          ]
+        },
+        "AuthorizationPolicy": "Anonymous",
+        "Order": -10
+      },
+      "stores-uploads-items": {
+        "ClusterId": "cluster-lante-store-service",
+        "Match": {
+          "Path": "/uploads/items/{**catch-all}",
+          "Methods": [
+            "GET"
+          ]
+        },
+        "AuthorizationPolicy": "Anonymous",
+        "Order": -10
+      },
+      "fleet-field-vehicle-photos": {
+        "ClusterId": "cluster-lante-fleet-service",
+        "Match": {
+          "Path": "/api/v1/FieldVehiclePhotos/{**catch-all}",
+          "Methods": [
+            "GET",
+            "POST",
+            "PUT",
+            "DELETE"
+          ]
+        },
+        "AuthorizationPolicy": "Default"
+      },
+      "stores-item-photos": {
+        "ClusterId": "cluster-lante-store-service",
+        "Match": {
+          "Path": "/api/v1/item-photos/{**catch-all}",
+          "Methods": [
+            "GET",
+            "POST",
+            "PUT",
+            "DELETE"
+          ]
+        },
+        "AuthorizationPolicy": "Default"
+      },
+      "operation-assignments-base": {
+        "ClusterId": "cluster-lante-operation-service",
+        "Match": {
+          "Path": "/api/v1/assignments",
+          "Methods": [
+            "GET",
+            "POST"
+          ]
+        },
+        "AuthorizationPolicy": "Default"
+      },
+      "operation-lab-work-order": {
+        "ClusterId": "cluster-lante-operation-service",
+        "Match": {
+          "Path": "/api/v1/assignments/{assignmentId}/lab-work-order",
+          "Methods": [
+            "GET",
+            "POST"
+          ]
+        },
+        "AuthorizationPolicy": "Default"
+      },
+      "operation-lab-work-order-detail": {
+        "ClusterId": "cluster-lante-operation-service",
+        "Match": {
+          "Path": "/api/v1/assignments/{assignmentId}/lab-work-order/{**catch-all}",
+          "Methods": [
+            "GET",
+            "POST"
+          ]
+        },
+        "AuthorizationPolicy": "Default"
+      },
+      "operation-assignments": {
+        "ClusterId": "cluster-lante-operation-service",
+        "Match": {
+          "Path": "/api/v1/assignments/{**catch-all}",
+          "Methods": [
+            "GET",
+            "POST",
+            "PUT",
+            "DELETE",
+            "PATCH"
+          ]
+        },
+        "AuthorizationPolicy": "Default"
+      },
+      "operation-service-reports-base": {
+        "ClusterId": "cluster-lante-operation-service",
+        "Match": {
+          "Path": "/api/v1/service-reports",
+          "Methods": [
+            "GET",
+            "POST"
+          ]
+        },
+        "AuthorizationPolicy": "Default"
+      },
+      "operation-service-reports": {
+        "ClusterId": "cluster-lante-operation-service",
+        "Match": {
+          "Path": "/api/v1/service-reports/{**catch-all}",
+          "Methods": [
+            "GET",
+            "POST",
+            "PUT",
+            "PATCH",
+            "DELETE"
+          ]
+        },
+        "AuthorizationPolicy": "Default"
+      },
+      "operation-requisitions-base": {
+        "ClusterId": "cluster-lante-operation-service",
+        "Match": {
+          "Path": "/api/v1/requisitions",
+          "Methods": [
+            "GET",
+            "POST"
+          ]
+        },
+        "AuthorizationPolicy": "Default"
+      },
+      "operation-requisitions": {
+        "ClusterId": "cluster-lante-operation-service",
+        "Match": {
+          "Path": "/api/v1/requisitions/{**catch-all}",
+          "Methods": [
+            "GET",
+            "POST",
+            "PUT",
+            "DELETE"
+          ]
+        },
+        "AuthorizationPolicy": "Default"
+      },
+      "operation-claims-base": {
+        "ClusterId": "cluster-lante-operation-service",
+        "Match": {
+          "Path": "/api/v1/claims",
+          "Methods": [
+            "GET",
+            "POST"
+          ]
+        },
+        "AuthorizationPolicy": "Default"
+      },
+      "operation-claims": {
+        "ClusterId": "cluster-lante-operation-service",
+        "Match": {
+          "Path": "/api/v1/claims/{**catch-all}",
+          "Methods": [
+            "GET",
+            "POST",
+            "PUT",
+            "DELETE"
+          ]
+        },
+        "AuthorizationPolicy": "Default"
+      },
+      "operation-field-vehicles-base": {
+        "ClusterId": "cluster-lante-operation-service",
+        "Match": {
+          "Path": "/api/v1/field-vehicles",
+          "Methods": [
+            "GET",
+            "POST"
+          ]
+        },
+        "AuthorizationPolicy": "Default"
+      },
+      "operation-field-vehicles": {
+        "ClusterId": "cluster-lante-operation-service",
+        "Match": {
+          "Path": "/api/v1/field-vehicles/{**catch-all}",
+          "Methods": [
+            "GET",
+            "POST",
+            "PUT",
+            "DELETE",
+            "PATCH"
+          ]
+        },
+        "AuthorizationPolicy": "Default"
+      },
+      "fleet-field-vehicles-base": {
+        "ClusterId": "cluster-lante-fleet-service",
+        "Match": {
+          "Path": "/api/v1/fleet/field-vehicles",
+          "Methods": [
+            "GET",
+            "POST"
+          ]
+        },
+        "Transforms": [
+          {
+            "PathPattern": "/api/v1/field-vehicles"
+          }
+        ],
+        "AuthorizationPolicy": "Default"
+      },
+      "fleet-field-vehicles": {
+        "ClusterId": "cluster-lante-fleet-service",
+        "Match": {
+          "Path": "/api/v1/fleet/field-vehicles/{**catch-all}",
+          "Methods": [
+            "GET",
+            "POST",
+            "PUT",
+            "DELETE",
+            "PATCH"
+          ]
+        },
+        "Transforms": [
+          {
+            "PathPattern": "/api/v1/field-vehicles/{**catch-all}"
+          }
+        ],
+        "AuthorizationPolicy": "Default"
+      },
+      "stores-suppliers-base": {
+        "ClusterId": "cluster-lante-store-service",
+        "Match": {
+          "Path": "/api/v1/suppliers",
+          "Methods": [
+            "GET",
+            "POST"
+          ]
+        },
+        "AuthorizationPolicy": "Default"
+      },
+      "stores-suppliers": {
+        "ClusterId": "cluster-lante-store-service",
+        "Match": {
+          "Path": "/api/v1/suppliers/{**catch-all}",
+          "Methods": [
+            "GET",
+            "POST",
+            "PUT",
+            "DELETE"
+          ]
+        },
+        "AuthorizationPolicy": "Default"
+      },
+      "stores-items-base": {
+        "ClusterId": "cluster-lante-store-service",
+        "Match": {
+          "Path": "/api/v1/items",
+          "Methods": [
+            "GET",
+            "POST"
+          ]
+        },
+        "AuthorizationPolicy": "Default"
+      },
+      "stores-items": {
+        "ClusterId": "cluster-lante-store-service",
+        "Match": {
+          "Path": "/api/v1/items/{**catch-all}",
+          "Methods": [
+            "GET",
+            "POST",
+            "PUT",
+            "DELETE"
+          ]
+        },
+        "AuthorizationPolicy": "Default"
+      },
+      "stores-grn-base": {
+        "ClusterId": "cluster-lante-store-service",
+        "Match": {
+          "Path": "/api/v1/grn",
+          "Methods": [
+            "GET",
+            "POST"
+          ]
+        },
+        "AuthorizationPolicy": "Default"
+      },
+      "stores-grn": {
+        "ClusterId": "cluster-lante-store-service",
+        "Match": {
+          "Path": "/api/v1/grn/{**catch-all}",
+          "Methods": [
+            "GET",
+            "POST",
+            "PUT",
+            "DELETE"
+          ]
+        },
+        "AuthorizationPolicy": "Default"
+      },
+      "stores-price-history-base": {
+        "ClusterId": "cluster-lante-store-service",
+        "Match": {
+          "Path": "/api/v1/purchase-price-history",
+          "Methods": [
+            "GET",
+            "POST"
+          ]
+        },
+        "AuthorizationPolicy": "Default"
+      },
+      "stores-price-history": {
+        "ClusterId": "cluster-lante-store-service",
+        "Match": {
+          "Path": "/api/v1/purchase-price-history/{**catch-all}",
+          "Methods": [
+            "GET",
+            "POST"
+          ]
+        },
+        "AuthorizationPolicy": "Default"
+      },
+      "stores-stock-units-base": {
+        "ClusterId": "cluster-lante-store-service",
+        "Match": {
+          "Path": "/api/v1/stock-units",
+          "Methods": [
+            "GET"
+          ]
+        },
+        "AuthorizationPolicy": "Default"
+      },
+      "stores-stock-units": {
+        "ClusterId": "cluster-lante-store-service",
+        "Match": {
+          "Path": "/api/v1/stock-units/{**catch-all}",
+          "Methods": [
+            "GET",
+            "PUT",
+            "DELETE"
+          ]
+        },
+        "AuthorizationPolicy": "Default"
+      },
+      "stores-issues-base": {
+        "ClusterId": "cluster-lante-store-service",
+        "Match": {
+          "Path": "/api/v1/store-issues",
+          "Methods": [
+            "GET",
+            "POST"
+          ]
+        },
+        "AuthorizationPolicy": "Default"
+      },
+      "stores-issues": {
+        "ClusterId": "cluster-lante-store-service",
+        "Match": {
+          "Path": "/api/v1/store-issues/{**catch-all}",
+          "Methods": [
+            "GET"
+          ]
+        },
+        "AuthorizationPolicy": "Default"
+      },
+      "stores-sold-items-base": {
+        "ClusterId": "cluster-lante-store-service",
+        "Match": {
+          "Path": "/api/v1/sold-items",
+          "Methods": [
+            "GET",
+            "POST"
+          ]
+        },
+        "AuthorizationPolicy": "Default"
+      },
+      "stores-sold-items": {
+        "ClusterId": "cluster-lante-store-service",
+        "Match": {
+          "Path": "/api/v1/sold-items/{**catch-all}",
+          "Methods": [
+            "GET"
+          ]
+        },
+        "AuthorizationPolicy": "Default"
+      },
+      "stores-stock-take-base": {
+        "ClusterId": "cluster-lante-store-service",
+        "Match": {
+          "Path": "/api/v1/stock-take",
+          "Methods": [
+            "GET",
+            "POST"
+          ]
+        },
+        "AuthorizationPolicy": "Default"
+      },
+      "stores-stock-take": {
+        "ClusterId": "cluster-lante-store-service",
+        "Match": {
+          "Path": "/api/v1/stock-take/{**catch-all}",
+          "Methods": [
+            "GET",
+            "POST"
+          ]
+        },
+        "AuthorizationPolicy": "Default"
+      },
+      "stores-categories-base": {
+        "ClusterId": "cluster-lante-store-service",
+        "Match": {
+          "Path": "/api/v1/categories",
+          "Methods": [
+            "GET",
+            "POST"
+          ]
+        },
+        "AuthorizationPolicy": "Default"
+      },
+      "stores-categories": {
+        "ClusterId": "cluster-lante-store-service",
+        "Match": {
+          "Path": "/api/v1/categories/{**catch-all}",
+          "Methods": [
+            "GET",
+            "POST",
+            "PUT",
+            "DELETE"
+          ]
+        },
+        "AuthorizationPolicy": "Default"
+      },
+      "stores-units-of-measure-base": {
+        "ClusterId": "cluster-lante-store-service",
+        "Match": {
+          "Path": "/api/v1/units-of-measure",
+          "Methods": [
+            "GET",
+            "POST"
+          ]
+        },
+        "AuthorizationPolicy": "Default"
+      },
+      "stores-units-of-measure": {
+        "ClusterId": "cluster-lante-store-service",
+        "Match": {
+          "Path": "/api/v1/units-of-measure/{**catch-all}",
+          "Methods": [
+            "GET",
+            "POST",
+            "PUT",
+            "DELETE"
+          ]
+        },
+        "AuthorizationPolicy": "Default"
+      },
+      "stores-locations-base": {
+        "ClusterId": "cluster-lante-store-service",
+        "Match": {
+          "Path": "/api/v1/locations",
+          "Methods": [
+            "GET",
+            "POST"
+          ]
+        },
+        "AuthorizationPolicy": "Default"
+      },
+      "stores-locations": {
+        "ClusterId": "cluster-lante-store-service",
+        "Match": {
+          "Path": "/api/v1/locations/{**catch-all}",
+          "Methods": [
+            "GET",
+            "POST",
+            "PUT",
+            "DELETE"
+          ]
+        },
+        "AuthorizationPolicy": "Default"
+      },
+      "stores-transfers-base": {
+        "ClusterId": "cluster-lante-store-service",
+        "Match": {
+          "Path": "/api/v1/store-transfers",
+          "Methods": [
+            "GET",
+            "POST"
+          ]
+        },
+        "AuthorizationPolicy": "Default"
+      },
+      "stores-transfers": {
+        "ClusterId": "cluster-lante-store-service",
+        "Match": {
+          "Path": "/api/v1/store-transfers/{**catch-all}",
+          "Methods": [
+            "GET",
+            "POST"
+          ]
+        },
+        "AuthorizationPolicy": "Default"
+      },
+      "stores-movements-base": {
+        "ClusterId": "cluster-lante-store-service",
+        "Match": {
+          "Path": "/api/v1/stock-movements",
+          "Methods": [
+            "GET"
+          ]
+        },
+        "AuthorizationPolicy": "Default"
+      },
+      "stores-movements": {
+        "ClusterId": "cluster-lante-store-service",
+        "Match": {
+          "Path": "/api/v1/stock-movements/{**catch-all}",
+          "Methods": [
+            "GET"
+          ]
+        },
+        "AuthorizationPolicy": "Default"
+      },
+      "fleet-trips-base": {
+        "ClusterId": "cluster-lante-fleet-service",
+        "Match": {
+          "Path": "/api/v1/trips",
+          "Methods": [
+            "GET",
+            "POST"
+          ]
+        },
+        "AuthorizationPolicy": "Default"
+      },
+      "fleet-trips": {
+        "ClusterId": "cluster-lante-fleet-service",
+        "Match": {
+          "Path": "/api/v1/trips/{**catch-all}",
+          "Methods": [
+            "GET",
+            "POST",
+            "PUT",
+            "DELETE"
+          ]
+        },
+        "AuthorizationPolicy": "Default"
+      },
+      "fleet-trucks-base": {
+        "ClusterId": "cluster-lante-fleet-service",
+        "Match": {
+          "Path": "/api/v1/trucks",
+          "Methods": [
+            "GET",
+            "POST"
+          ]
+        },
+        "AuthorizationPolicy": "Default"
+      },
+      "fleet-trucks": {
+        "ClusterId": "cluster-lante-fleet-service",
+        "Match": {
+          "Path": "/api/v1/trucks/{**catch-all}",
+          "Methods": [
+            "GET",
+            "POST",
+            "PUT",
+            "DELETE"
+          ]
+        },
+        "AuthorizationPolicy": "Default"
+      },
+      "fleet-driver-profiles-base": {
+        "ClusterId": "cluster-lante-fleet-service",
+        "Match": {
+          "Path": "/api/v1/DriverProfiles",
+          "Methods": [
+            "GET",
+            "POST"
+          ]
+        },
+        "AuthorizationPolicy": "Default"
+      },
+      "fleet-driver-profiles": {
+        "ClusterId": "cluster-lante-fleet-service",
+        "Match": {
+          "Path": "/api/v1/DriverProfiles/{**catch-all}",
+          "Methods": [
+            "GET",
+            "POST",
+            "PUT",
+            "DELETE"
+          ]
+        },
+        "AuthorizationPolicy": "Default"
+      },
+      "fleet-materials-base": {
+        "ClusterId": "cluster-lante-fleet-service",
+        "Match": {
+          "Path": "/api/v1/materials",
+          "Methods": [
+            "GET",
+            "POST"
+          ]
+        },
+        "AuthorizationPolicy": "Default"
+      },
+      "fleet-materials": {
+        "ClusterId": "cluster-lante-fleet-service",
+        "Match": {
+          "Path": "/api/v1/materials/{**catch-all}",
+          "Methods": [
+            "GET",
+            "POST",
+            "PUT",
+            "DELETE"
+          ]
+        },
+        "AuthorizationPolicy": "Default"
+      },
+      "fleet-vehicleclasses-base": {
+        "ClusterId": "cluster-lante-fleet-service",
+        "Match": {
+          "Path": "/api/v1/vehicleclasses",
+          "Methods": [
+            "GET",
+            "POST"
+          ]
+        },
+        "AuthorizationPolicy": "Default"
+      },
+      "fleet-vehicleclasses": {
+        "ClusterId": "cluster-lante-fleet-service",
+        "Match": {
+          "Path": "/api/v1/vehicleclasses/{**catch-all}",
+          "Methods": [
+            "GET",
+            "POST",
+            "PUT",
+            "DELETE"
+          ]
+        },
+        "AuthorizationPolicy": "Default"
+      },
+      "fleet-material-variants-base": {
+        "ClusterId": "cluster-lante-fleet-service",
+        "Match": {
+          "Path": "/api/v1/material-variants",
+          "Methods": [
+            "GET",
+            "POST"
+          ]
+        },
+        "AuthorizationPolicy": "Default"
+      },
+      "fleet-material-variants": {
+        "ClusterId": "cluster-lante-fleet-service",
+        "Match": {
+          "Path": "/api/v1/material-variants/{**catch-all}",
+          "Methods": [
+            "GET",
+            "DELETE"
+          ]
+        },
+        "AuthorizationPolicy": "Default"
+      },
+      "fleet-triptypes-base": {
+        "ClusterId": "cluster-lante-fleet-service",
+        "Match": {
+          "Path": "/api/v1/triptypes",
+          "Methods": [
+            "GET",
+            "POST"
+          ]
+        },
+        "AuthorizationPolicy": "Default"
+      },
+      "fleet-triptypes": {
+        "ClusterId": "cluster-lante-fleet-service",
+        "Match": {
+          "Path": "/api/v1/triptypes/{**catch-all}",
+          "Methods": [
+            "GET",
+            "POST",
+            "PUT",
+            "DELETE"
+          ]
+        },
+        "AuthorizationPolicy": "Default"
+      },
+      "fleet-tripmaterials-base": {
+        "ClusterId": "cluster-lante-fleet-service",
+        "Match": {
+          "Path": "/api/v1/tripmaterials",
+          "Methods": [
+            "GET",
+            "POST"
+          ]
+        },
+        "AuthorizationPolicy": "Default"
+      },
+      "fleet-tripmaterials": {
+        "ClusterId": "cluster-lante-fleet-service",
+        "Match": {
+          "Path": "/api/v1/tripmaterials/{**catch-all}",
+          "Methods": [
+            "GET",
+            "POST",
+            "PUT",
+            "DELETE"
+          ]
+        },
+        "AuthorizationPolicy": "Default"
+      },
+      "fleet-vehiclemileage-base": {
+        "ClusterId": "cluster-lante-fleet-service",
+        "Match": {
+          "Path": "/api/v1/vehiclemileage",
+          "Methods": [
+            "GET",
+            "POST"
+          ]
+        },
+        "AuthorizationPolicy": "Default"
+      },
+      "fleet-vehiclemileage": {
+        "ClusterId": "cluster-lante-fleet-service",
+        "Match": {
+          "Path": "/api/v1/vehiclemileage/{**catch-all}",
+          "Methods": [
+            "GET",
+            "POST",
+            "PUT",
+            "DELETE"
+          ]
+        },
+        "AuthorizationPolicy": "Default"
+      },
+      "fleet-expenses-base": {
+        "ClusterId": "cluster-lante-fleet-service",
+        "Match": {
+          "Path": "/api/v1/expenses",
+          "Methods": [
+            "GET",
+            "POST"
+          ]
+        },
+        "AuthorizationPolicy": "Default"
+      },
+      "fleet-expenses": {
+        "ClusterId": "cluster-lante-fleet-service",
+        "Match": {
+          "Path": "/api/v1/expenses/{**catch-all}",
+          "Methods": [
+            "GET",
+            "POST",
+            "PUT",
+            "DELETE"
+          ]
+        },
+        "AuthorizationPolicy": "Default"
+      },
+      "fleet-tripdeposits-base": {
+        "ClusterId": "cluster-lante-fleet-service",
+        "Match": {
+          "Path": "/api/v1/tripdeposits",
+          "Methods": [
+            "GET",
+            "POST"
+          ]
+        },
+        "AuthorizationPolicy": "Default"
+      },
+      "fleet-tripdeposits": {
+        "ClusterId": "cluster-lante-fleet-service",
+        "Match": {
+          "Path": "/api/v1/tripdeposits/{**catch-all}",
+          "Methods": [
+            "GET",
+            "POST",
+            "PUT",
+            "DELETE"
+          ]
+        },
+        "AuthorizationPolicy": "Default"
+      },
+      "fleet-uploads-tripdeposits": {
+        "ClusterId": "cluster-lante-fleet-service",
+        "Match": {
+          "Path": "/uploads/tripdeposits/{**catch-all}",
+          "Methods": [
+            "GET"
+          ]
+        },
+        "AuthorizationPolicy": "Anonymous",
+        "Order": -10
+      },
+      "fleet-receipts-base": {
+        "ClusterId": "cluster-lante-fleet-service",
+        "Match": {
+          "Path": "/api/v1/receipts",
+          "Methods": [
+            "GET",
+            "POST"
+          ]
+        },
+        "AuthorizationPolicy": "Default"
+      },
+      "fleet-receipts": {
+        "ClusterId": "cluster-lante-fleet-service",
+        "Match": {
+          "Path": "/api/v1/receipts/{**catch-all}",
+          "Methods": [
+            "GET",
+            "POST",
+            "PUT",
+            "DELETE"
+          ]
+        },
+        "AuthorizationPolicy": "Default"
+      },
+      "fleet-licenseclasses-base": {
+        "ClusterId": "cluster-lante-fleet-service",
+        "Match": {
+          "Path": "/api/v1/licenseclasses",
+          "Methods": [
+            "GET",
+            "POST"
+          ]
+        },
+        "AuthorizationPolicy": "Default"
+      },
+      "fleet-licenseclasses": {
+        "ClusterId": "cluster-lante-fleet-service",
+        "Match": {
+          "Path": "/api/v1/licenseclasses/{**catch-all}",
+          "Methods": [
+            "GET",
+            "POST",
+            "PUT",
+            "DELETE"
+          ]
+        },
+        "AuthorizationPolicy": "Default"
+      },
+      "fleet-feedback-base": {
+        "ClusterId": "cluster-lante-fleet-service",
+        "Match": {
+          "Path": "/api/v1/feedback",
+          "Methods": [
+            "GET",
+            "POST"
+          ]
+        },
+        "AuthorizationPolicy": "Default"
+      },
+      "fleet-feedback": {
+        "ClusterId": "cluster-lante-fleet-service",
+        "Match": {
+          "Path": "/api/v1/feedback/{**catch-all}",
+          "Methods": [
+            "GET",
+            "POST",
+            "PUT",
+            "DELETE"
+          ]
+        },
+        "AuthorizationPolicy": "Default"
+      },
+      "fleet-materialcosts-base": {
+        "ClusterId": "cluster-lante-fleet-service",
+        "Match": {
+          "Path": "/api/v1/materialcosts",
+          "Methods": [
+            "GET",
+            "POST"
+          ]
+        },
+        "AuthorizationPolicy": "Default"
+      },
+      "fleet-materialcosts": {
+        "ClusterId": "cluster-lante-fleet-service",
+        "Match": {
+          "Path": "/api/v1/materialcosts/{**catch-all}",
+          "Methods": [
+            "GET",
+            "POST",
+            "PUT",
+            "DELETE"
+          ]
+        },
+        "AuthorizationPolicy": "Default"
+      },
+      "fleet-materialphotos-base": {
+        "ClusterId": "cluster-lante-fleet-service",
+        "Match": {
+          "Path": "/api/v1/materialphotos",
+          "Methods": [
+            "GET",
+            "POST"
+          ]
+        },
+        "AuthorizationPolicy": "Default"
+      },
+      "fleet-materialphotos": {
+        "ClusterId": "cluster-lante-fleet-service",
+        "Match": {
+          "Path": "/api/v1/materialphotos/{**catch-all}",
+          "Methods": [
+            "GET",
+            "POST",
+            "PUT",
+            "DELETE"
+          ]
+        },
+        "AuthorizationPolicy": "Default"
+      },
+      "fleet-materialvariantphotos-base": {
+        "ClusterId": "cluster-lante-fleet-service",
+        "Match": {
+          "Path": "/api/v1/materialvariantphotos",
+          "Methods": [
+            "GET",
+            "POST"
+          ]
+        },
+        "AuthorizationPolicy": "Default"
+      },
+      "fleet-materialvariantphotos": {
+        "ClusterId": "cluster-lante-fleet-service",
+        "Match": {
+          "Path": "/api/v1/materialvariantphotos/{**catch-all}",
+          "Methods": [
+            "GET",
+            "POST",
+            "PUT",
+            "DELETE"
+          ]
+        },
+        "AuthorizationPolicy": "Default"
+      },
+      "operation-checkins-base": {
+        "ClusterId": "cluster-lante-operation-service",
+        "Match": {
+          "Path": "/api/v1/checkins",
+          "Methods": [
+            "GET",
+            "POST"
+          ]
+        },
+        "AuthorizationPolicy": "Default"
+      },
+      "operation-checkins": {
+        "ClusterId": "cluster-lante-operation-service",
+        "Match": {
+          "Path": "/api/v1/checkins/{**catch-all}",
+          "Methods": [
+            "GET",
+            "POST",
+            "PUT",
+            "DELETE"
+          ]
+        },
+        "AuthorizationPolicy": "Default"
+      },
+      "operation-photos-base": {
+        "ClusterId": "cluster-lante-operation-service",
+        "Match": {
+          "Path": "/api/v1/photos",
+          "Methods": [
+            "GET",
+            "POST"
+          ]
+        },
+        "AuthorizationPolicy": "Default"
+      },
+      "operation-photos": {
+        "ClusterId": "cluster-lante-operation-service",
+        "Match": {
+          "Path": "/api/v1/photos/{**catch-all}",
+          "Methods": [
+            "GET",
+            "POST",
+            "PUT",
+            "DELETE"
+          ]
+        },
+        "AuthorizationPolicy": "Default"
+      },
+      "operation-pca-base": {
+        "ClusterId": "cluster-lante-operation-service",
+        "Match": {
+          "Path": "/api/v1/pettycashadvanceforms",
+          "Methods": [
+            "GET",
+            "POST"
+          ]
+        },
+        "AuthorizationPolicy": "Default"
+      },
+      "operation-pca": {
+        "ClusterId": "cluster-lante-operation-service",
+        "Match": {
+          "Path": "/api/v1/pettycashadvanceforms/{**catch-all}",
+          "Methods": [
+            "GET",
+            "POST",
+            "PUT",
+            "DELETE"
+          ]
+        },
+        "AuthorizationPolicy": "Default"
+      },
+      "operation-arf-base": {
+        "ClusterId": "cluster-lante-operation-service",
+        "Match": {
+          "Path": "/api/v1/advancereturnforms",
+          "Methods": [
+            "GET",
+            "POST"
+          ]
+        },
+        "AuthorizationPolicy": "Default"
+      },
+      "operation-arf": {
+        "ClusterId": "cluster-lante-operation-service",
+        "Match": {
+          "Path": "/api/v1/advancereturnforms/{**catch-all}",
+          "Methods": [
+            "GET",
+            "POST",
+            "PUT",
+            "DELETE"
+          ]
+        },
+        "AuthorizationPolicy": "Default"
+      },
+      "operation-pdrf-base": {
+        "ClusterId": "cluster-lante-operation-service",
+        "Match": {
+          "Path": "/api/v1/perdiemreturnforms",
+          "Methods": [
+            "GET",
+            "POST"
+          ]
+        },
+        "AuthorizationPolicy": "Default"
+      },
+      "operation-pdrf": {
+        "ClusterId": "cluster-lante-operation-service",
+        "Match": {
+          "Path": "/api/v1/perdiemreturnforms/{**catch-all}",
+          "Methods": [
+            "GET",
+            "POST",
+            "PUT",
+            "DELETE"
+          ]
+        },
+        "AuthorizationPolicy": "Default"
+      },
+      "operation-balances-base": {
+        "ClusterId": "cluster-lante-operation-service",
+        "Match": {
+          "Path": "/api/v1/assignmentbalances",
+          "Methods": [
+            "GET",
+            "POST"
+          ]
+        },
+        "AuthorizationPolicy": "Default"
+      },
+      "operation-balances": {
+        "ClusterId": "cluster-lante-operation-service",
+        "Match": {
+          "Path": "/api/v1/assignmentbalances/{**catch-all}",
+          "Methods": [
+            "GET",
+            "POST",
+            "PUT",
+            "DELETE"
+          ]
+        },
+        "AuthorizationPolicy": "Default"
+      },
+      "operation-dailysummaries-base": {
+        "ClusterId": "cluster-lante-operation-service",
+        "Match": {
+          "Path": "/api/v1/dailysummaries",
+          "Methods": [
+            "GET",
+            "POST"
+          ]
+        },
+        "AuthorizationPolicy": "Default"
+      },
+      "operation-dailysummaries": {
+        "ClusterId": "cluster-lante-operation-service",
+        "Match": {
+          "Path": "/api/v1/dailysummaries/{**catch-all}",
+          "Methods": [
+            "GET",
+            "POST",
+            "PUT",
+            "DELETE"
+          ]
+        },
+        "AuthorizationPolicy": "Default"
+      },
+      "operation-metrics-base": {
+        "ClusterId": "cluster-lante-operation-service",
+        "Match": {
+          "Path": "/api/v1/performancemetrics",
+          "Methods": [
+            "GET",
+            "POST"
+          ]
+        },
+        "AuthorizationPolicy": "Default"
+      },
+      "operation-metrics": {
+        "ClusterId": "cluster-lante-operation-service",
+        "Match": {
+          "Path": "/api/v1/performancemetrics/{**catch-all}",
+          "Methods": [
+            "GET",
+            "POST",
+            "PUT",
+            "DELETE"
+          ]
+        },
+        "AuthorizationPolicy": "Default"
+      },
+      "operation-refunds-base": {
+        "ClusterId": "cluster-lante-operation-service",
+        "Match": {
+          "Path": "/api/v1/refunds",
+          "Methods": [
+            "GET",
+            "POST"
+          ]
+        },
+        "AuthorizationPolicy": "Default"
+      },
+      "operation-refunds": {
+        "ClusterId": "cluster-lante-operation-service",
+        "Match": {
+          "Path": "/api/v1/refunds/{**catch-all}",
+          "Methods": [
+            "GET",
+            "POST",
+            "PUT",
+            "DELETE"
+          ]
+        },
+        "AuthorizationPolicy": "Default"
+      },
+      "operation-attachments-base": {
+        "ClusterId": "cluster-lante-operation-service",
+        "Match": {
+          "Path": "/api/v1/attachments",
+          "Methods": [
+            "GET",
+            "POST"
+          ]
+        },
+        "AuthorizationPolicy": "Default"
+      },
+      "operation-attachments": {
+        "ClusterId": "cluster-lante-operation-service",
+        "Match": {
+          "Path": "/api/v1/attachments/{**catch-all}",
+          "Methods": [
+            "GET",
+            "POST",
+            "PUT",
+            "DELETE"
+          ]
+        },
+        "AuthorizationPolicy": "Default"
+      },
+      "operation-financials-base": {
+        "ClusterId": "cluster-lante-operation-service",
+        "Match": {
+          "Path": "/api/v1/financials",
+          "Methods": [
+            "GET",
+            "POST"
+          ]
+        },
+        "AuthorizationPolicy": "Default"
+      },
+      "operation-financials": {
+        "ClusterId": "cluster-lante-operation-service",
+        "Match": {
+          "Path": "/api/v1/financials/{**catch-all}",
+          "Methods": [
+            "GET",
+            "POST",
+            "PUT",
+            "PATCH",
+            "DELETE"
+          ]
+        },
+        "AuthorizationPolicy": "Default"
+      },
+      "operation-timesheets-base": {
+        "ClusterId": "cluster-lante-operation-service",
+        "Match": {
+          "Path": "/api/v1/timesheets",
+          "Methods": [
+            "GET",
+            "POST"
+          ]
+        },
+        "AuthorizationPolicy": "Default"
+      },
+      "operation-timesheets": {
+        "ClusterId": "cluster-lante-operation-service",
+        "Match": {
+          "Path": "/api/v1/timesheets/{**catch-all}",
+          "Methods": [
+            "GET",
+            "POST",
+            "PUT",
+            "PATCH",
+            "DELETE"
+          ]
+        },
+        "AuthorizationPolicy": "Default"
+      },
+      "operation-variation-orders-base": {
+        "ClusterId": "cluster-lante-operation-service",
+        "Match": {
+          "Path": "/api/v1/variation-orders",
+          "Methods": [
+            "GET",
+            "POST"
+          ]
+        },
+        "AuthorizationPolicy": "Default"
+      },
+      "operation-variation-orders": {
+        "ClusterId": "cluster-lante-operation-service",
+        "Match": {
+          "Path": "/api/v1/variation-orders/{**catch-all}",
+          "Methods": [
+            "GET",
+            "POST",
+            "PUT",
+            "PATCH",
+            "DELETE"
+          ]
+        },
+        "AuthorizationPolicy": "Default"
+      },
+      "operation-handovers-base": {
+        "ClusterId": "cluster-lante-operation-service",
+        "Match": {
+          "Path": "/api/v1/handovers",
+          "Methods": [
+            "GET",
+            "POST"
+          ]
+        },
+        "AuthorizationPolicy": "Default"
+      },
+      "operation-handovers": {
+        "ClusterId": "cluster-lante-operation-service",
+        "Match": {
+          "Path": "/api/v1/handovers/{**catch-all}",
+          "Methods": [
+            "GET",
+            "POST",
+            "PUT",
+            "PATCH",
+            "DELETE"
+          ]
+        },
+        "AuthorizationPolicy": "Default"
+      },
+      "operation-negligence-incidents-base": {
+        "ClusterId": "cluster-lante-operation-service",
+        "Match": {
+          "Path": "/api/v1/negligence-incidents",
+          "Methods": [
+            "GET",
+            "POST"
+          ]
+        },
+        "AuthorizationPolicy": "Default"
+      },
+      "operation-negligence-incidents": {
+        "ClusterId": "cluster-lante-operation-service",
+        "Match": {
+          "Path": "/api/v1/negligence-incidents/{**catch-all}",
+          "Methods": [
+            "GET",
+            "POST",
+            "PUT",
+            "PATCH",
+            "DELETE"
+          ]
+        },
+        "AuthorizationPolicy": "Default"
+      },
+      "operation-reference-standards-base": {
+        "ClusterId": "cluster-lante-operation-service",
+        "Match": {
+          "Path": "/api/v1/reference-standards",
+          "Methods": [
+            "GET",
+            "POST"
+          ]
+        },
+        "AuthorizationPolicy": "Default"
+      },
+      "operation-reference-standards": {
+        "ClusterId": "cluster-lante-operation-service",
+        "Match": {
+          "Path": "/api/v1/reference-standards/{**catch-all}",
+          "Methods": [
+            "GET",
+            "POST",
+            "PUT",
+            "PATCH",
+            "DELETE"
+          ]
+        },
+        "AuthorizationPolicy": "Default"
+      },
+      "operation-calibration-certificates-base": {
+        "ClusterId": "cluster-lante-operation-service",
+        "Match": {
+          "Path": "/api/v1/calibration-certificates",
+          "Methods": [
+            "GET"
+          ]
+        },
+        "AuthorizationPolicy": "Default"
+      },
+      "operation-calibration-certificates": {
+        "ClusterId": "cluster-lante-operation-service",
+        "Match": {
+          "Path": "/api/v1/calibration-certificates/{**catch-all}",
+          "Methods": [
+            "GET",
+            "POST"
+          ]
+        },
+        "AuthorizationPolicy": "Default"
+      },
+      "operation-uploads-attachments": {
+        "ClusterId": "cluster-lante-operation-service",
+        "Match": {
+          "Path": "/uploads/attachments/{**catch-all}",
+          "Methods": [
+            "GET"
+          ]
+        },
+        "AuthorizationPolicy": "Anonymous",
+        "Order": -10
+      },
+      "operation-uploads-photos": {
+        "ClusterId": "cluster-lante-operation-service",
+        "Match": {
+          "Path": "/uploads/photos/{**catch-all}",
+          "Methods": [
+            "GET"
+          ]
+        },
+        "AuthorizationPolicy": "Anonymous",
+        "Order": -10
+      },
+      "operation-uploads": {
+        "ClusterId": "cluster-lante-operation-service",
+        "Match": {
+          "Path": "/uploads/operations/{**catch-all}",
+          "Methods": [
+            "GET"
+          ]
+        },
+        "AuthorizationPolicy": "Anonymous",
+        "Order": -10
+      },
+      "hse-uploads-static": {
+        "ClusterId": "cluster-lante-hse-service",
+        "Match": {
+          "Path": "/uploads/hse/{**catch-all}",
+          "Methods": [
+            "GET"
+          ]
+        },
+        "AuthorizationPolicy": "Anonymous",
+        "Order": -10
+      },
+      "compliance-uploads-static": {
+        "ClusterId": "cluster-lante-compliance-service",
+        "Match": {
+          "Path": "/uploads/compliance/{**catch-all}",
+          "Methods": [
+            "GET"
+          ]
+        },
+        "AuthorizationPolicy": "Anonymous",
+        "Order": -10
+      },
+      "subcontracts-uploads-static": {
+        "ClusterId": "cluster-lante-subcontracts-service",
+        "Match": {
+          "Path": "/uploads/subcontracts/{**catch-all}",
+          "Methods": [
+            "GET"
+          ]
+        },
+        "AuthorizationPolicy": "Anonymous",
+        "Order": -10
+      },
+      "ticketing-uploads": {
+        "ClusterId": "cluster-lante-ticketing-service",
+        "Match": {
+          "Path": "/uploads/{**catch-all}",
+          "Methods": [
+            "GET"
+          ]
+        },
+        "AuthorizationPolicy": "Anonymous",
+        "Order": -1
+      },
+      "platform-login": {
+        "ClusterId": "cluster-lante-user-service",
+        "Match": {
+          "Path": "/api/v1/auth/platform/login",
+          "Methods": [
+            "POST"
+          ]
+        },
+        "AuthorizationPolicy": "Anonymous",
+        "RateLimiterPolicy": "rl-10-per-min"
+      },
+      "auth-switch-branch": {
+        "ClusterId": "cluster-lante-user-service",
+        "Match": {
+          "Path": "/api/v1/auth/switch-branch",
+          "Methods": [
+            "POST"
+          ]
+        },
+        "AuthorizationPolicy": "Default"
+      },
+      "platform-all": {
+        "ClusterId": "cluster-lante-user-service",
+        "Match": {
+          "Path": "/api/v1/platform/{**catch-all}",
+          "Methods": [
+            "GET",
+            "POST",
+            "PUT",
+            "DELETE"
+          ]
+        },
+        "AuthorizationPolicy": "Default"
+      },
+      "tenants-public-slug": {
+        "ClusterId": "cluster-lante-user-service",
+        "Match": {
+          "Path": "/api/v1/tenants/public/{slug}",
+          "Methods": [
+            "GET"
+          ]
+        },
+        "AuthorizationPolicy": "Anonymous"
+      },
+      "tenants-all": {
+        "ClusterId": "cluster-lante-user-service",
+        "Match": {
+          "Path": "/api/v1/tenants/{**catch-all}",
+          "Methods": [
+            "GET",
+            "POST",
+            "PUT",
+            "DELETE"
+          ]
+        },
+        "AuthorizationPolicy": "Default",
+        "Metadata": {
+          "ClaimsToHeaders": "{\"X-Tenant-Id\": \"Claims[tenant_id] > value\", \"X-Branch-Id\": \"Claims[branch_id] > value\", \"X-Is-Company-Admin\": \"Claims[is_company_admin] > value\"}"
+        }
+      },
+      "hse-service-sites": {
+        "ClusterId": "cluster-lante-hse-service",
+        "Match": {
+          "Path": "/api/v1/hse-sites/{**catch-all}",
+          "Methods": [
+            "GET",
+            "POST",
+            "PUT",
+            "DELETE"
+          ]
+        },
+        "AuthorizationPolicy": "Default"
+      },
+      "hse-service-incidents": {
+        "ClusterId": "cluster-lante-hse-service",
+        "Match": {
+          "Path": "/api/v1/hse-incidents/{**catch-all}",
+          "Methods": [
+            "GET",
+            "POST",
+            "PUT",
+            "PATCH",
+            "DELETE"
+          ]
+        },
+        "AuthorizationPolicy": "Default"
+      },
+      "hse-service-corrective-actions": {
+        "ClusterId": "cluster-lante-hse-service",
+        "Match": {
+          "Path": "/api/v1/hse-corrective-actions/{**catch-all}",
+          "Methods": [
+            "GET",
+            "PUT",
+            "DELETE"
+          ]
+        },
+        "AuthorizationPolicy": "Default"
+      },
+      "hse-service-rams": {
+        "ClusterId": "cluster-lante-hse-service",
+        "Match": {
+          "Path": "/api/v1/hse-rams/{**catch-all}",
+          "Methods": [
+            "GET",
+            "POST",
+            "PUT",
+            "PATCH",
+            "DELETE"
+          ]
+        },
+        "AuthorizationPolicy": "Default"
+      },
+      "hse-service-ppe-issues": {
+        "ClusterId": "cluster-lante-hse-service",
+        "Match": {
+          "Path": "/api/v1/hse-ppe-issues/{**catch-all}",
+          "Methods": [
+            "GET",
+            "POST",
+            "PUT",
+            "DELETE"
+          ]
+        },
+        "AuthorizationPolicy": "Default"
+      },
+      "hse-service-toolbox-talks": {
+        "ClusterId": "cluster-lante-hse-service",
+        "Match": {
+          "Path": "/api/v1/hse-toolbox-talks/{**catch-all}",
+          "Methods": [
+            "GET",
+            "POST",
+            "PUT",
+            "DELETE"
+          ]
+        },
+        "AuthorizationPolicy": "Default"
+      },
+      "hse-service-training-records": {
+        "ClusterId": "cluster-lante-hse-service",
+        "Match": {
+          "Path": "/api/v1/hse-training-records/{**catch-all}",
+          "Methods": [
+            "GET",
+            "POST",
+            "PUT",
+            "DELETE"
+          ]
+        },
+        "AuthorizationPolicy": "Default"
+      },
+      "hse-service-statutory-inspections": {
+        "ClusterId": "cluster-lante-hse-service",
+        "Match": {
+          "Path": "/api/v1/hse-statutory-inspections/{**catch-all}",
+          "Methods": [
+            "GET",
+            "POST",
+            "PUT",
+            "PATCH",
+            "DELETE"
+          ]
+        },
+        "AuthorizationPolicy": "Default"
+      },
+      "hse-service-subcontractors": {
+        "ClusterId": "cluster-lante-hse-service",
+        "Match": {
+          "Path": "/api/v1/hse-subcontractors/{**catch-all}",
+          "Methods": [
+            "GET",
+            "POST",
+            "PATCH"
+          ]
+        },
+        "AuthorizationPolicy": "Default"
+      },
+      "hse-service-dashboard": {
+        "ClusterId": "cluster-lante-hse-service",
+        "Match": {
+          "Path": "/api/v1/hse-dashboard",
+          "Methods": [
+            "GET"
+          ]
+        },
+        "AuthorizationPolicy": "Default"
+      },
+      "hse-service-uploads": {
+        "ClusterId": "cluster-lante-hse-service",
+        "Match": {
+          "Path": "/api/v1/hse-uploads",
+          "Methods": [
+            "POST"
+          ]
+        },
+        "AuthorizationPolicy": "Default"
+      },
+      "swagger-user-service": {
+        "ClusterId": "cluster-lante-user-service",
+        "Match": {
+          "Path": "/swagger/user/{**catch-all}",
+          "Methods": [
+            "GET"
+          ]
+        },
+        "Transforms": [
+          {
+            "PathPattern": "/swagger/{**catch-all}"
+          }
+        ],
+        "AuthorizationPolicy": "Anonymous"
+      },
+      "swagger-ticketing-service": {
+        "ClusterId": "cluster-lante-ticketing-service",
+        "Match": {
+          "Path": "/swagger/tickets/{**catch-all}",
+          "Methods": [
+            "GET"
+          ]
+        },
+        "Transforms": [
+          {
+            "PathPattern": "/swagger/{**catch-all}"
+          }
+        ],
+        "AuthorizationPolicy": "Anonymous"
+      },
+      "swagger-project-service": {
+        "ClusterId": "cluster-lante-operation-service",
+        "Match": {
+          "Path": "/swagger/projects/{**catch-all}",
+          "Methods": [
+            "GET"
+          ]
+        },
+        "Transforms": [
+          {
+            "PathPattern": "/swagger/{**catch-all}"
+          }
+        ],
+        "AuthorizationPolicy": "Anonymous"
+      },
+      "swagger-license-service": {
+        "ClusterId": "cluster-lante-license-service",
+        "Match": {
+          "Path": "/swagger/license/{**catch-all}",
+          "Methods": [
+            "GET"
+          ]
+        },
+        "Transforms": [
+          {
+            "PathPattern": "/swagger/{**catch-all}"
+          }
+        ],
+        "AuthorizationPolicy": "Anonymous"
+      },
+      "swagger-operation-service": {
+        "ClusterId": "cluster-lante-operation-service",
+        "Match": {
+          "Path": "/swagger/operations/{**catch-all}",
+          "Methods": [
+            "GET"
+          ]
+        },
+        "Transforms": [
+          {
+            "PathPattern": "/swagger/{**catch-all}"
+          }
+        ],
+        "AuthorizationPolicy": "Anonymous"
+      },
+      "swagger-fleet-service": {
+        "ClusterId": "cluster-lante-fleet-service",
+        "Match": {
+          "Path": "/swagger/fleet/{**catch-all}",
+          "Methods": [
+            "GET"
+          ]
+        },
+        "Transforms": [
+          {
+            "PathPattern": "/{**catch-all}"
+          }
+        ],
+        "AuthorizationPolicy": "Anonymous"
+      },
+      "finance-service": {
+        "ClusterId": "cluster-lante-finance-service",
+        "Match": {
+          "Path": "/api/v1/finance/{**catch-all}",
+          "Methods": [
+            "GET",
+            "POST",
+            "PUT",
+            "PATCH",
+            "DELETE"
+          ]
+        },
+        "AuthorizationPolicy": "Default"
+      },
+      "swagger-finance-service": {
+        "ClusterId": "cluster-lante-finance-service",
+        "Match": {
+          "Path": "/swagger/finance/{**catch-all}",
+          "Methods": [
+            "GET"
+          ]
+        },
+        "Transforms": [
+          {
+            "PathPattern": "/swagger/{**catch-all}"
+          }
+        ],
+        "AuthorizationPolicy": "Anonymous"
+      },
+      "swagger-hse-service": {
+        "ClusterId": "cluster-lante-hse-service",
+        "Match": {
+          "Path": "/swagger/hse/{**catch-all}",
+          "Methods": [
+            "GET"
+          ]
+        },
+        "Transforms": [
+          {
+            "PathPattern": "/swagger/{**catch-all}"
+          }
+        ],
+        "AuthorizationPolicy": "Anonymous"
+      },
+      "compliance-service-gifts": {
+        "ClusterId": "cluster-lante-compliance-service",
+        "Match": {
+          "Path": "/api/v1/compliance-gifts/{**catch-all}",
+          "Methods": [
+            "GET",
+            "POST",
+            "PUT"
+          ]
+        },
+        "AuthorizationPolicy": "Default"
+      },
+      "compliance-service-coi": {
+        "ClusterId": "cluster-lante-compliance-service",
+        "Match": {
+          "Path": "/api/v1/compliance-coi/{**catch-all}",
+          "Methods": [
+            "GET",
+            "POST",
+            "PUT",
+            "PATCH"
+          ]
+        },
+        "AuthorizationPolicy": "Default"
+      },
+      "compliance-service-whistleblower-cases": {
+        "ClusterId": "cluster-lante-compliance-service",
+        "Match": {
+          "Path": "/api/v1/compliance-whistleblower-cases/{**catch-all}",
+          "Methods": [
+            "GET",
+            "POST",
+            "PUT",
+            "PATCH"
+          ]
+        },
+        "AuthorizationPolicy": "Default"
+      },
+      "compliance-service-dsr": {
+        "ClusterId": "cluster-lante-compliance-service",
+        "Match": {
+          "Path": "/api/v1/compliance-dsr/{**catch-all}",
+          "Methods": [
+            "GET",
+            "POST",
+            "PUT",
+            "PATCH"
+          ]
+        },
+        "AuthorizationPolicy": "Default"
+      },
+      "compliance-service-data-breaches": {
+        "ClusterId": "cluster-lante-compliance-service",
+        "Match": {
+          "Path": "/api/v1/compliance-data-breaches/{**catch-all}",
+          "Methods": [
+            "GET",
+            "POST",
+            "PUT",
+            "PATCH"
+          ]
+        },
+        "AuthorizationPolicy": "Default"
+      },
+      "compliance-service-policies": {
+        "ClusterId": "cluster-lante-compliance-service",
+        "Match": {
+          "Path": "/api/v1/compliance-policies/{**catch-all}",
+          "Methods": [
+            "GET",
+            "POST",
+            "PUT"
+          ]
+        },
+        "AuthorizationPolicy": "Default"
+      },
+      "compliance-service-sop-library": {
+        "ClusterId": "cluster-lante-compliance-service",
+        "Match": {
+          "Path": "/api/v1/sop-library/{**catch-all}",
+          "Methods": [
+            "GET",
+            "POST",
+            "PUT"
+          ]
+        },
+        "AuthorizationPolicy": "Default"
+      },
+      "compliance-service-board-resolutions": {
+        "ClusterId": "cluster-lante-compliance-service",
+        "Match": {
+          "Path": "/api/v1/compliance-board-resolutions/{**catch-all}",
+          "Methods": [
+            "GET",
+            "POST",
+            "PUT"
+          ]
+        },
+        "AuthorizationPolicy": "Default"
+      },
+      "compliance-service-licences": {
+        "ClusterId": "cluster-lante-compliance-service",
+        "Match": {
+          "Path": "/api/v1/compliance-licences/{**catch-all}",
+          "Methods": [
+            "GET",
+            "POST",
+            "PUT",
+            "PATCH"
+          ]
+        },
+        "AuthorizationPolicy": "Default"
+      },
+      "compliance-service-abc-training": {
+        "ClusterId": "cluster-lante-compliance-service",
+        "Match": {
+          "Path": "/api/v1/compliance-abc-training/{**catch-all}",
+          "Methods": [
+            "GET",
+            "POST",
+            "PUT"
+          ]
+        },
+        "AuthorizationPolicy": "Default"
+      },
+      "compliance-service-related-party": {
+        "ClusterId": "cluster-lante-compliance-service",
+        "Match": {
+          "Path": "/api/v1/compliance-related-party/{**catch-all}",
+          "Methods": [
+            "GET",
+            "POST",
+            "PUT",
+            "PATCH"
+          ]
+        },
+        "AuthorizationPolicy": "Default"
+      },
+      "compliance-service-icm-related-parties": {
+        "ClusterId": "cluster-lante-compliance-service",
+        "Match": {
+          "Path": "/api/v1/compliance-icm-related-parties/{**catch-all}",
+          "Methods": [
+            "GET",
+            "POST",
+            "PUT"
+          ]
+        },
+        "AuthorizationPolicy": "Default"
+      },
+      "compliance-service-icm-agreements": {
+        "ClusterId": "cluster-lante-compliance-service",
+        "Match": {
+          "Path": "/api/v1/compliance-icm-agreements/{**catch-all}",
+          "Methods": [
+            "GET",
+            "POST",
+            "PUT"
+          ]
+        },
+        "AuthorizationPolicy": "Default"
+      },
+      "compliance-service-icm-transactions": {
+        "ClusterId": "cluster-lante-compliance-service",
+        "Match": {
+          "Path": "/api/v1/compliance-icm-transactions/{**catch-all}",
+          "Methods": [
+            "GET",
+            "POST",
+            "PUT",
+            "PATCH"
+          ]
+        },
+        "AuthorizationPolicy": "Default"
+      },
+      "compliance-service-dashboard": {
+        "ClusterId": "cluster-lante-compliance-service",
+        "Match": {
+          "Path": "/api/v1/compliance-dashboard",
+          "Methods": [
+            "GET"
+          ]
+        },
+        "AuthorizationPolicy": "Default"
+      },
+      "compliance-service-statutory-obligations": {
+        "ClusterId": "cluster-lante-compliance-service",
+        "Match": {
+          "Path": "/api/v1/statutory-obligations/{**catch-all}",
+          "Methods": [
+            "GET",
+            "POST",
+            "PUT"
+          ]
+        },
+        "AuthorizationPolicy": "Default"
+      },
+      "compliance-service-statutory-deadlines": {
+        "ClusterId": "cluster-lante-compliance-service",
+        "Match": {
+          "Path": "/api/v1/statutory-deadlines/{**catch-all}",
+          "Methods": [
+            "GET",
+            "POST",
+            "PATCH"
+          ]
+        },
+        "AuthorizationPolicy": "Default"
+      },
+      "compliance-service-annual-returns": {
+        "ClusterId": "cluster-lante-compliance-service",
+        "Match": {
+          "Path": "/api/v1/annual-returns/{**catch-all}",
+          "Methods": [
+            "GET",
+            "POST",
+            "PUT",
+            "PATCH"
+          ]
+        },
+        "AuthorizationPolicy": "Default"
+      },
+      "compliance-service-tax-compliance-certs": {
+        "ClusterId": "cluster-lante-compliance-service",
+        "Match": {
+          "Path": "/api/v1/tax-compliance-certs/{**catch-all}",
+          "Methods": [
+            "GET",
+            "POST",
+            "PUT",
+            "PATCH"
+          ]
+        },
+        "AuthorizationPolicy": "Default"
+      },
+      "compliance-service-cosec-tasks": {
+        "ClusterId": "cluster-lante-compliance-service",
+        "Match": {
+          "Path": "/api/v1/cosec-tasks/{**catch-all}",
+          "Methods": [
+            "GET",
+            "POST",
+            "PUT",
+            "PATCH"
+          ]
+        },
+        "AuthorizationPolicy": "Default"
+      },
+      "compliance-service-statutory-dashboard": {
+        "ClusterId": "cluster-lante-compliance-service",
+        "Match": {
+          "Path": "/api/v1/statutory-dashboard",
+          "Methods": [
+            "GET"
+          ]
+        },
+        "AuthorizationPolicy": "Default"
+      },
+      "compliance-service-uploads": {
+        "ClusterId": "cluster-lante-compliance-service",
+        "Match": {
+          "Path": "/api/v1/compliance-uploads",
+          "Methods": [
+            "POST"
+          ]
+        },
+        "AuthorizationPolicy": "Default"
+      },
+      "compliance-service-customer-survey": {
+        "ClusterId": "cluster-lante-compliance-service",
+        "Match": {
+          "Path": "/api/v1/portal/customer-survey",
+          "Methods": [
+            "POST"
+          ]
+        },
+        "AuthorizationPolicy": "Anonymous"
+      },
+      "compliance-service-quality-dashboard": {
+        "ClusterId": "cluster-lante-compliance-service",
+        "Match": {
+          "Path": "/api/v1/quality-dashboard",
+          "Methods": [
+            "GET"
+          ]
+        },
+        "AuthorizationPolicy": "Default"
+      },
+      "swagger-compliance-service": {
+        "ClusterId": "cluster-lante-compliance-service",
+        "Match": {
+          "Path": "/swagger/compliance/{**catch-all}",
+          "Methods": [
+            "GET"
+          ]
+        },
+        "Transforms": [
+          {
+            "PathPattern": "/swagger/{**catch-all}"
+          }
+        ],
+        "AuthorizationPolicy": "Anonymous"
+      },
+      "subcontracts-service-subcontractors": {
+        "ClusterId": "cluster-lante-subcontracts-service",
+        "Match": {
+          "Path": "/api/v1/subcontractors/{**catch-all}",
+          "Methods": [
+            "GET",
+            "POST",
+            "PUT",
+            "DELETE"
+          ]
+        },
+        "AuthorizationPolicy": "Default"
+      },
+      "subcontracts-service-prequalifications": {
+        "ClusterId": "cluster-lante-subcontracts-service",
+        "Match": {
+          "Path": "/api/v1/prequalifications/{**catch-all}",
+          "Methods": [
+            "GET",
+            "POST",
+            "PUT",
+            "PATCH",
+            "DELETE"
+          ]
+        },
+        "AuthorizationPolicy": "Default"
+      },
+      "subcontracts-service-awards": {
+        "ClusterId": "cluster-lante-subcontracts-service",
+        "Match": {
+          "Path": "/api/v1/subcontract-awards/{**catch-all}",
+          "Methods": [
+            "GET",
+            "POST",
+            "PUT",
+            "PATCH",
+            "DELETE"
+          ]
+        },
+        "AuthorizationPolicy": "Default"
+      },
+      "subcontracts-service-scorecards": {
+        "ClusterId": "cluster-lante-subcontracts-service",
+        "Match": {
+          "Path": "/api/v1/subcon-scorecards/{**catch-all}",
+          "Methods": [
+            "GET",
+            "POST",
+            "PUT",
+            "DELETE"
+          ]
+        },
+        "AuthorizationPolicy": "Default"
+      },
+      "subcontracts-service-retentions": {
+        "ClusterId": "cluster-lante-subcontracts-service",
+        "Match": {
+          "Path": "/api/v1/payment-retentions/{**catch-all}",
+          "Methods": [
+            "GET",
+            "POST",
+            "PUT",
+            "PATCH",
+            "DELETE"
+          ]
+        },
+        "AuthorizationPolicy": "Default"
+      },
+      "subcontracts-service-uploads": {
+        "ClusterId": "cluster-lante-subcontracts-service",
+        "Match": {
+          "Path": "/api/v1/subcontracts-uploads",
+          "Methods": [
+            "POST"
+          ]
+        },
+        "AuthorizationPolicy": "Default"
+      },
+      "swagger-subcontracts-service": {
+        "ClusterId": "cluster-lante-subcontracts-service",
+        "Match": {
+          "Path": "/swagger/subcontracts/{**catch-all}",
+          "Methods": [
+            "GET"
+          ]
+        },
+        "Transforms": [
+          {
+            "PathPattern": "/swagger/{**catch-all}"
+          }
+        ],
+        "AuthorizationPolicy": "Anonymous"
+      },
+      "reporting-service-reports": {
+        "ClusterId": "cluster-lante-reporting-service",
+        "Match": {
+          "Path": "/api/v1/reports/{**catch-all}",
+          "Methods": [
+            "GET"
+          ]
+        },
+        "AuthorizationPolicy": "Default"
+      },
+      "reporting-service-report-definitions": {
+        "ClusterId": "cluster-lante-reporting-service",
+        "Match": {
+          "Path": "/api/v1/report-definitions/{**catch-all}",
+          "Methods": [
+            "GET",
+            "POST"
+          ]
+        },
+        "AuthorizationPolicy": "Default"
+      },
+      "reporting-service-report-schedules": {
+        "ClusterId": "cluster-lante-reporting-service",
+        "Match": {
+          "Path": "/api/v1/report-schedules/{**catch-all}",
+          "Methods": [
+            "GET",
+            "POST",
+            "PUT",
+            "DELETE"
+          ]
+        },
+        "AuthorizationPolicy": "Default"
+      },
+      "reporting-service-report-runs": {
+        "ClusterId": "cluster-lante-reporting-service",
+        "Match": {
+          "Path": "/api/v1/report-runs/{**catch-all}",
+          "Methods": [
+            "GET"
+          ]
+        },
+        "AuthorizationPolicy": "Default"
+      },
+      "reporting-service-data-sources": {
+        "ClusterId": "cluster-lante-reporting-service",
+        "Match": {
+          "Path": "/api/v1/data-sources/{**catch-all}",
+          "Methods": [
+            "GET"
+          ]
+        },
+        "AuthorizationPolicy": "Default"
+      },
+      "reporting-service-dashboards": {
+        "ClusterId": "cluster-lante-reporting-service",
+        "Match": {
+          "Path": "/api/v1/dashboards/{**catch-all}",
+          "Methods": [
+            "GET",
+            "POST",
+            "DELETE"
+          ]
+        },
+        "AuthorizationPolicy": "Default"
+      },
+      "reporting-service-kpi-scorecards": {
+        "ClusterId": "cluster-lante-reporting-service",
+        "Match": {
+          "Path": "/api/v1/kpi-scorecards/{**catch-all}",
+          "Methods": [
+            "GET",
+            "POST",
+            "DELETE"
+          ]
+        },
+        "AuthorizationPolicy": "Default"
+      },
+      "reporting-service-red-flag-rules": {
+        "ClusterId": "cluster-lante-reporting-service",
+        "Match": {
+          "Path": "/api/v1/red-flag-rules/{**catch-all}",
+          "Methods": [
+            "GET",
+            "POST",
+            "DELETE"
+          ]
+        },
+        "AuthorizationPolicy": "Default"
+      },
+      "reporting-service-uploads": {
+        "ClusterId": "cluster-lante-reporting-service",
+        "Match": {
+          "Path": "/uploads/reports/{**catch-all}",
+          "Methods": [
+            "GET"
+          ]
+        },
+        "AuthorizationPolicy": "Anonymous",
+        "Order": -10
+      },
+      "swagger-reporting-service": {
+        "ClusterId": "cluster-lante-reporting-service",
+        "Match": {
+          "Path": "/swagger/reporting/{**catch-all}",
+          "Methods": [
+            "GET"
+          ]
+        },
+        "Transforms": [
+          {
+            "PathPattern": "/swagger/{**catch-all}"
+          }
+        ],
+        "AuthorizationPolicy": "Anonymous"
+      },
+      "crm-customers-base": {
+        "ClusterId": "cluster-lante-crm-service",
+        "Match": {
+          "Path": "/api/v1/customers",
+          "Methods": [
+            "GET",
+            "POST"
+          ]
+        },
+        "AuthorizationPolicy": "Default"
+      },
+      "crm-customers": {
+        "ClusterId": "cluster-lante-crm-service",
+        "Match": {
+          "Path": "/api/v1/customers/{**catch-all}",
+          "Methods": [
+            "GET",
+            "POST",
+            "PUT",
+            "PATCH",
+            "DELETE"
+          ]
+        },
+        "AuthorizationPolicy": "Default"
+      },
+      "crm-leads-base": {
+        "ClusterId": "cluster-lante-crm-service",
+        "Match": {
+          "Path": "/api/v1/leads",
+          "Methods": [
+            "GET",
+            "POST"
+          ]
+        },
+        "AuthorizationPolicy": "Default"
+      },
+      "crm-leads": {
+        "ClusterId": "cluster-lante-crm-service",
+        "Match": {
+          "Path": "/api/v1/leads/{**catch-all}",
+          "Methods": [
+            "GET",
+            "POST",
+            "PUT",
+            "PATCH",
+            "DELETE"
+          ]
+        },
+        "AuthorizationPolicy": "Default"
+      },
+      "crm-opportunities-base": {
+        "ClusterId": "cluster-lante-crm-service",
+        "Match": {
+          "Path": "/api/v1/opportunities",
+          "Methods": [
+            "GET",
+            "POST"
+          ]
+        },
+        "AuthorizationPolicy": "Default"
+      },
+      "crm-opportunities": {
+        "ClusterId": "cluster-lante-crm-service",
+        "Match": {
+          "Path": "/api/v1/opportunities/{**catch-all}",
+          "Methods": [
+            "GET",
+            "POST",
+            "PUT",
+            "PATCH",
+            "DELETE"
+          ]
+        },
+        "AuthorizationPolicy": "Default"
+      },
+      "crm-quotations-base": {
+        "ClusterId": "cluster-lante-crm-service",
+        "Match": {
+          "Path": "/api/v1/quotations",
+          "Methods": [
+            "GET",
+            "POST"
+          ]
+        },
+        "AuthorizationPolicy": "Default"
+      },
+      "crm-quotations": {
+        "ClusterId": "cluster-lante-crm-service",
+        "Match": {
+          "Path": "/api/v1/quotations/{**catch-all}",
+          "Methods": [
+            "GET",
+            "POST",
+            "PUT",
+            "PATCH",
+            "DELETE"
+          ]
+        },
+        "AuthorizationPolicy": "Default"
+      },
+      "crm-deals-base": {
+        "ClusterId": "cluster-lante-crm-service",
+        "Match": {
+          "Path": "/api/v1/deals",
+          "Methods": [
+            "GET",
+            "POST"
+          ]
+        },
+        "AuthorizationPolicy": "Default"
+      },
+      "crm-deals": {
+        "ClusterId": "cluster-lante-crm-service",
+        "Match": {
+          "Path": "/api/v1/deals/{**catch-all}",
+          "Methods": [
+            "GET",
+            "POST",
+            "PUT",
+            "PATCH",
+            "DELETE"
+          ]
+        },
+        "AuthorizationPolicy": "Default"
+      },
+      "crm-tenders-base": {
+        "ClusterId": "cluster-lante-crm-service",
+        "Match": {
+          "Path": "/api/v1/tenders",
+          "Methods": [
+            "GET",
+            "POST"
+          ]
+        },
+        "AuthorizationPolicy": "Default"
+      },
+      "crm-tenders": {
+        "ClusterId": "cluster-lante-crm-service",
+        "Match": {
+          "Path": "/api/v1/tenders/{**catch-all}",
+          "Methods": [
+            "GET",
+            "POST",
+            "PUT",
+            "PATCH",
+            "DELETE"
+          ]
+        },
+        "AuthorizationPolicy": "Default"
+      },
+      "crm-tasks-base": {
+        "ClusterId": "cluster-lante-crm-service",
+        "Match": {
+          "Path": "/api/v1/tasks",
+          "Methods": [
+            "GET",
+            "POST"
+          ]
+        },
+        "AuthorizationPolicy": "Default"
+      },
+      "crm-tasks": {
+        "ClusterId": "cluster-lante-crm-service",
+        "Match": {
+          "Path": "/api/v1/tasks/{**catch-all}",
+          "Methods": [
+            "GET",
+            "POST",
+            "PUT",
+            "PATCH",
+            "DELETE"
+          ]
+        },
+        "AuthorizationPolicy": "Default"
+      },
+      "crm-visits-base": {
+        "ClusterId": "cluster-lante-crm-service",
+        "Match": {
+          "Path": "/api/v1/visits",
+          "Methods": [
+            "GET",
+            "POST"
+          ]
+        },
+        "AuthorizationPolicy": "Default"
+      },
+      "crm-visits": {
+        "ClusterId": "cluster-lante-crm-service",
+        "Match": {
+          "Path": "/api/v1/visits/{**catch-all}",
+          "Methods": [
+            "GET",
+            "POST",
+            "PUT",
+            "PATCH",
+            "DELETE"
+          ]
+        },
+        "AuthorizationPolicy": "Default"
+      },
+      "crm-visit-targets-base": {
+        "ClusterId": "cluster-lante-crm-service",
+        "Match": {
+          "Path": "/api/v1/visit-targets",
+          "Methods": [
+            "GET",
+            "POST"
+          ]
+        },
+        "AuthorizationPolicy": "Default"
+      },
+      "crm-visit-targets": {
+        "ClusterId": "cluster-lante-crm-service",
+        "Match": {
+          "Path": "/api/v1/visit-targets/{**catch-all}",
+          "Methods": [
+            "GET",
+            "POST",
+            "PUT",
+            "PATCH",
+            "DELETE"
+          ]
+        },
+        "AuthorizationPolicy": "Default"
+      },
+      "crm-activity-log-base": {
+        "ClusterId": "cluster-lante-crm-service",
+        "Match": {
+          "Path": "/api/v1/activity-log",
+          "Methods": [
+            "GET",
+            "POST"
+          ]
+        },
+        "AuthorizationPolicy": "Default"
+      },
+      "crm-activity-log": {
+        "ClusterId": "cluster-lante-crm-service",
+        "Match": {
+          "Path": "/api/v1/activity-log/{**catch-all}",
+          "Methods": [
+            "GET",
+            "POST",
+            "PUT",
+            "PATCH",
+            "DELETE"
+          ]
+        },
+        "AuthorizationPolicy": "Default"
+      },
+      "crm-transfers-base": {
+        "ClusterId": "cluster-lante-crm-service",
+        "Match": {
+          "Path": "/api/v1/transfers",
+          "Methods": [
+            "GET",
+            "POST"
+          ]
+        },
+        "AuthorizationPolicy": "Default"
+      },
+      "crm-transfers": {
+        "ClusterId": "cluster-lante-crm-service",
+        "Match": {
+          "Path": "/api/v1/transfers/{**catch-all}",
+          "Methods": [
+            "GET",
+            "POST",
+            "PUT",
+            "PATCH",
+            "DELETE"
+          ]
+        },
+        "AuthorizationPolicy": "Default"
+      },
+      "crm-dashboard-base": {
+        "ClusterId": "cluster-lante-crm-service",
+        "Match": {
+          "Path": "/api/v1/dashboard",
+          "Methods": [
+            "GET",
+            "POST"
+          ]
+        },
+        "AuthorizationPolicy": "Default"
+      },
+      "crm-dashboard": {
+        "ClusterId": "cluster-lante-crm-service",
+        "Match": {
+          "Path": "/api/v1/dashboard/{**catch-all}",
+          "Methods": [
+            "GET",
+            "POST",
+            "PUT",
+            "PATCH",
+            "DELETE"
+          ]
+        },
+        "AuthorizationPolicy": "Default"
+      },
+      "crm-marketing-base": {
+        "ClusterId": "cluster-lante-crm-service",
+        "Match": {
+          "Path": "/api/v1/marketing",
+          "Methods": [
+            "GET",
+            "POST"
+          ]
+        },
+        "AuthorizationPolicy": "Default"
+      },
+      "crm-marketing": {
+        "ClusterId": "cluster-lante-crm-service",
+        "Match": {
+          "Path": "/api/v1/marketing/{**catch-all}",
+          "Methods": [
+            "GET",
+            "POST",
+            "PUT",
+            "PATCH",
+            "DELETE"
+          ]
+        },
+        "AuthorizationPolicy": "Default"
+      },
+      "crm-aftersales-base": {
+        "ClusterId": "cluster-lante-crm-service",
+        "Match": {
+          "Path": "/api/v1/aftersales",
+          "Methods": [
+            "GET",
+            "POST"
+          ]
+        },
+        "AuthorizationPolicy": "Default"
+      },
+      "crm-aftersales": {
+        "ClusterId": "cluster-lante-crm-service",
+        "Match": {
+          "Path": "/api/v1/aftersales/{**catch-all}",
+          "Methods": [
+            "GET",
+            "POST",
+            "PUT",
+            "PATCH",
+            "DELETE"
+          ]
+        },
+        "AuthorizationPolicy": "Default"
+      },
+      "crm-legal-base": {
+        "ClusterId": "cluster-lante-crm-service",
+        "Match": {
+          "Path": "/api/v1/legal",
+          "Methods": [
+            "GET",
+            "POST"
+          ]
+        },
+        "AuthorizationPolicy": "Default"
+      },
+      "crm-legal": {
+        "ClusterId": "cluster-lante-crm-service",
+        "Match": {
+          "Path": "/api/v1/legal/{**catch-all}",
+          "Methods": [
+            "GET",
+            "POST",
+            "PUT",
+            "PATCH",
+            "DELETE"
+          ]
+        },
+        "AuthorizationPolicy": "Default"
+      },
+      "crm-payment-alerts-base": {
+        "ClusterId": "cluster-lante-crm-service",
+        "Match": {
+          "Path": "/api/v1/payment-alerts",
+          "Methods": [
+            "GET",
+            "POST"
+          ]
+        },
+        "AuthorizationPolicy": "Default"
+      },
+      "crm-payment-alerts": {
+        "ClusterId": "cluster-lante-crm-service",
+        "Match": {
+          "Path": "/api/v1/payment-alerts/{**catch-all}",
+          "Methods": [
+            "GET",
+            "POST",
+            "PUT",
+            "PATCH",
+            "DELETE"
+          ]
+        },
+        "AuthorizationPolicy": "Default"
+      },
+      "procurement-all": {
+        "ClusterId": "cluster-lante-procurement-service",
+        "Match": {
+          "Path": "/api/v1/procurement/{**catch-all}",
+          "Methods": [
+            "GET",
+            "POST",
+            "PUT",
+            "PATCH",
+            "DELETE"
+          ]
+        },
+        "AuthorizationPolicy": "Default"
+      },
+      "hr-all": {
+        "ClusterId": "cluster-lante-hr-service",
+        "Match": {
+          "Path": "/api/v1/hr/{**catch-all}",
+          "Methods": [
+            "GET",
+            "POST",
+            "PUT",
+            "PATCH",
+            "DELETE"
+          ]
+        },
+        "AuthorizationPolicy": "Default"
+      },
+      "swagger-crm-service": {
+        "ClusterId": "cluster-lante-crm-service",
+        "Match": {
+          "Path": "/swagger/crm/{**catch-all}",
+          "Methods": [
+            "GET"
+          ]
+        },
+        "Transforms": [
+          {
+            "PathPattern": "/swagger/{**catch-all}"
+          }
+        ],
+        "AuthorizationPolicy": "Anonymous"
+      },
+      "swagger-hr-service": {
+        "ClusterId": "cluster-lante-hr-service",
+        "Match": {
+          "Path": "/swagger/hr/{**catch-all}",
+          "Methods": [
+            "GET"
+          ]
+        },
+        "Transforms": [
+          {
+            "PathPattern": "/swagger/{**catch-all}"
+          }
+        ],
+        "AuthorizationPolicy": "Anonymous"
+      },
+      "swagger-procurement-service": {
+        "ClusterId": "cluster-lante-procurement-service",
+        "Match": {
+          "Path": "/swagger/procurement/{**catch-all}",
+          "Methods": [
+            "GET"
+          ]
+        },
+        "Transforms": [
+          {
+            "PathPattern": "/swagger/{**catch-all}"
+          }
+        ],
+        "AuthorizationPolicy": "Anonymous"
+      },
+      "swagger-store-service": {
+        "ClusterId": "cluster-lante-store-service",
+        "Match": {
+          "Path": "/swagger/store/{**catch-all}",
+          "Methods": [
+            "GET"
+          ]
+        },
+        "Transforms": [
+          {
+            "PathPattern": "/swagger/{**catch-all}"
+          }
+        ],
+        "AuthorizationPolicy": "Anonymous"
+      }
+    },
+    "Clusters": {
+      "cluster-lante-user-service": {
+        "Destinations": {
+          "cluster-lante-user-service/destination1": {
+            "Address": "http://lante-user-service:8080/"
+          }
+        }
+      },
+      "cluster-lante-ticketing-service": {
+        "Destinations": {
+          "cluster-lante-ticketing-service/destination1": {
+            "Address": "http://lante-ticketing-service:8080/"
+          }
+        }
+      },
+      "cluster-lante-operation-service": {
+        "Destinations": {
+          "cluster-lante-operation-service/destination1": {
+            "Address": "http://lante-operation-service:8080/"
+          }
+        }
+      },
+      "cluster-lante-license-service": {
+        "Destinations": {
+          "cluster-lante-license-service/destination1": {
+            "Address": "http://lante-license-service:8080/"
+          }
+        }
+      },
+      "cluster-lante-fleet-service": {
+        "Destinations": {
+          "cluster-lante-fleet-service/destination1": {
+            "Address": "http://lante-fleet-service:8080/"
+          }
+        }
+      },
+      "cluster-lante-store-service": {
+        "Destinations": {
+          "cluster-lante-store-service/destination1": {
+            "Address": "http://lante-store-service:8080/"
+          }
+        }
+      },
+      "cluster-lante-hse-service": {
+        "Destinations": {
+          "cluster-lante-hse-service/destination1": {
+            "Address": "http://lante-hse-service:8080/"
+          }
+        }
+      },
+      "cluster-lante-compliance-service": {
+        "Destinations": {
+          "cluster-lante-compliance-service/destination1": {
+            "Address": "http://lante-compliance-service:8080/"
+          }
+        }
+      },
+      "cluster-lante-subcontracts-service": {
+        "Destinations": {
+          "cluster-lante-subcontracts-service/destination1": {
+            "Address": "http://lante-subcontracts-service:8080/"
+          }
+        }
+      },
+      "cluster-lante-finance-service": {
+        "Destinations": {
+          "cluster-lante-finance-service/destination1": {
+            "Address": "http://lante-finance-service:8080/"
+          }
+        }
+      },
+      "cluster-lante-reporting-service": {
+        "Destinations": {
+          "cluster-lante-reporting-service/destination1": {
+            "Address": "http://lante-reporting-service:8080/"
+          }
+        }
+      },
+      "cluster-lante-crm-service": {
+        "Destinations": {
+          "cluster-lante-crm-service/destination1": {
+            "Address": "http://lante-crm-service:8080/"
+          }
+        }
+      },
+      "cluster-lante-procurement-service": {
+        "Destinations": {
+          "cluster-lante-procurement-service/destination1": {
+            "Address": "http://lante-procurement-service:8080/"
+          }
+        }
+      },
+      "cluster-lante-hr-service": {
+        "Destinations": {
+          "cluster-lante-hr-service/destination1": {
+            "Address": "http://lante-hr-service:8080/"
+          }
+        }
+      }
+    }
+  }
+}

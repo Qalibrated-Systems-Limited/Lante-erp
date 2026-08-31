@@ -1,0 +1,239 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ─── QSL brand tokens (navy + gold) ──────────────────────────────────────────
+   --brand / --accent are white-label hooks: a tenant can override them at
+   runtime (e.g. document.documentElement.style.setProperty('--brand', '#...')).
+   Default to QSL navy/gold. */
+:root {
+  --brand:  #1B3A5C;   /* navy  */
+  --brandD: #0D2238;   /* navy dark */
+  --accent: #C8960C;   /* gold  */
+
+  --font-body:    'Inter', 'Helvetica Neue', Arial, sans-serif;
+  --font-display: 'Inter', 'Helvetica Neue', Arial, sans-serif;
+  --font-mono:    'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+html {
+  font-family: var(--font-body);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  font-size: 16px;
+}
+
+body {
+  font-family: var(--font-body);
+  font-size: 1rem;
+  line-height: 1.6;
+  color: #334155;
+  background: #F0F4F8;
+  margin: 0;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-display);
+  font-weight: 700;
+  line-height: 1.2;
+  color: #1B3A5C;
+}
+
+.font-display { font-family: var(--font-display) !important; }
+.font-body    { font-family: var(--font-body)    !important; }
+.font-mono    { font-family: var(--font-mono)     !important; }
+
+/* Scrollbar */
+::-webkit-scrollbar       { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: #F0F4F8; }
+::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: #94A3B8; }
+
+a, button { transition: color .15s, background .15s, border-color .15s, opacity .15s; }
+
+/* ─── Responsive layout utilities ─────────────────────────────────────────── */
+
+.page-content {
+  padding: 16px;
+  width: 100%;
+  max-width: 1200px;
+  box-sizing: border-box;
+}
+@media (min-width: 640px) {
+  .page-content { padding: 20px 24px; }
+}
+@media (min-width: 1024px) {
+  .page-content { padding: 28px 32px; }
+}
+
+.grid-2col {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 16px;
+}
+@media (min-width: 1024px) {
+  .grid-2col {
+    grid-template-columns: 1fr 1fr;
+    gap: 24px;
+  }
+}
+
+.grid-3col {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 14px;
+}
+@media (min-width: 640px) {
+  .grid-3col { grid-template-columns: 1fr 1fr; }
+}
+@media (min-width: 1024px) {
+  .grid-3col { grid-template-columns: 1fr 1fr 1fr; gap: 20px; }
+}
+
+.table-scroll {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+.table-scroll table {
+  min-width: 600px;
+}
+
+/* Thin, on-brand scrollbar for the dark sidebar nav — the default OS scrollbar
+   renders light/opaque and looks out of place against the navy background. */
+.sidebar-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.18) transparent;
+}
+.sidebar-scroll::-webkit-scrollbar {
+  width: 6px;
+}
+.sidebar-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+.sidebar-scroll::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.18);
+  border-radius: 999px;
+}
+.sidebar-scroll::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.32);
+}
+
+/* Sidebar buttons sit flush against the dark navy panel and clip against its
+   overflow:hidden edges, so the browser's default blue focus ring looks cut
+   off/misaligned. Swap it for an inset gold ring that stays inside the
+   button's own box — keyboard focus is still visible, just correctly placed. */
+.sidebar-btn {
+  outline: none;
+}
+.sidebar-btn:focus-visible {
+  outline: none;
+  box-shadow: inset 0 0 0 2px rgba(200, 150, 12, 0.7);
+}
+
+.page-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 24px;
+}
+.page-header-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+.filter-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 20px;
+}
+.filter-bar input,
+.filter-bar select {
+  min-width: 140px;
+}
+
+@media (max-width: 639px) {
+  .sm\:hidden { display: none !important; }
+}
+
+@layer components {
+  .btn-primary {
+    @apply inline-flex items-center justify-center gap-2 px-6 py-2.5 text-sm font-bold rounded-lg
+           border-none cursor-pointer text-white;
+    background: var(--brand, #1B3A5C);
+    box-shadow: 0 2px 8px rgba(27,58,92,.25);
+    transition: opacity .2s, transform .2s;
+  }
+  .btn-primary:hover { opacity: .92; transform: translateY(-1px); }
+  .btn-primary:disabled { opacity: .6; cursor: not-allowed; transform: none; }
+
+  .btn-accent {
+    @apply inline-flex items-center justify-center gap-2 px-6 py-2.5 text-sm font-bold rounded-lg
+           border-none cursor-pointer text-white;
+    background: var(--accent, #C8960C);
+    box-shadow: 0 2px 8px rgba(200,150,12,.25);
+    transition: opacity .2s, transform .2s;
+  }
+  .btn-accent:hover { opacity: .92; transform: translateY(-1px); }
+
+  .btn-outline {
+    @apply inline-flex items-center justify-center gap-2 px-6 py-2.5 text-sm font-bold rounded-lg
+           bg-transparent cursor-pointer;
+    color: #1B3A5C;
+    border: 1.5px solid #1B3A5C;
+    transition: background .2s, transform .2s;
+  }
+  .btn-outline:hover { background: #F0F4F8; transform: translateY(-1px); }
+
+  .btn-ghost {
+    @apply inline-flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium rounded-lg
+           cursor-pointer;
+    color: #64748b;
+  }
+  .btn-ghost:hover { background: #F0F4F8; color: #1B3A5C; }
+
+  .card {
+    @apply bg-white rounded-xl border;
+    border-color: #E8ECF0;
+    box-shadow: 0 1px 3px rgba(27,58,92,.08);
+  }
+
+  .input-field {
+    @apply w-full px-4 py-2.5 rounded-lg text-sm outline-none;
+    color: #334155;
+    border: 1.5px solid #E8ECF0;
+    background: #fff;
+    transition: border-color .2s, box-shadow .2s;
+    font-family: var(--font-body);
+  }
+  .input-field::placeholder { color: #94A3B8; }
+  .input-field:focus {
+    border-color: #C8960C;
+    box-shadow: 0 0 0 3px rgba(200,150,12,.15);
+  }
+
+  .input {
+    @apply w-full px-3 py-2.5 rounded-lg text-sm outline-none bg-white;
+    color: #334155;
+    border: 1.5px solid #E8ECF0;
+    font-family: var(--font-body);
+  }
+  .input::placeholder { color: #94A3B8; }
+  .input:focus {
+    border-color: #C8960C;
+    box-shadow: 0 0 0 3px rgba(200,150,12,.15);
+  }
+
+  .skeleton {
+    @apply rounded animate-pulse;
+    background: #E8ECF0;
+  }
+}

@@ -1,0 +1,2 @@
+Place your logo file here as "logo.png" (or "logo.svg").
+The app references /logo.png and falls back to "QC" text if the image is missing.

@@ -1,0 +1,60 @@
+## .NET
+bin/
+obj/
+*.user
+*.suo
+*.lscache
+.vs/
+_site/
+TestResults/
+*.nupkg
+*.snupkg
+
+## EF Migrations snapshot (keep migrations, skip snapshot if desired)
+# **/Migrations/*Snapshot.cs
+
+## Environment / secrets — never commit these
+.env
+.env.*
+kubernetes/secrets/secrets.env
+appsettings.*.json
+!appsettings.json
+!appsettings.Development.json
+
+## Node / frontend
+node_modules/
+dist/
+.next/
+build/
+.turbo/
+.pnpm-store/
+pnpm-lock.yaml
+
+## OS
+.DS_Store
+Thumbs.db
+
+## Logs
+logs/
+*.log
+
+## Docker
+*.pid
+
+## Local dev file uploads (bind-mounted into service containers)
+Deployment/uploads/
+
+packages/microservice/ticketing/INTERGRATIONS.md
+## Internal integration notes (not for the repo)
+packages/microservices/ticketing/INTEGRATIONS.md
+
+# Python bytecode cache from CI validator scripts
+scripts/ci/__pycache__/
+__pycache__/
+
+## Internal projects backlog (not for the repo)
+docs/PROJECTS_GAP_ANALYSIS.md
+
+# JetBrains per-developer IDE state (window layout, open tabs, local history).
+# Shared config such as runConfigurations/ can be force-added if ever needed.
+.idea/

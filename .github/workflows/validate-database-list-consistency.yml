@@ -1,0 +1,36 @@
+name: Validate Database List Consistency
+
+# Guards against the class of bug found on 2026-08-18: kubernetes/helm-charts/lante-erp-platform's
+# initdb bootstrap script, kubernetes/secrets/generate-secrets.sh, and a (since-deleted) backup
+# CronJob each hardcoded their own list of the live tenant databases, and none of them agreed —
+# 3 databases including the general ledger went unbacked-up for weeks as a result. See
+# scripts/ci/validate_database_list_consistency.py for the full rationale.
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - "kubernetes/helm-charts/lante-erp-platform/values.yaml"
+      - "kubernetes/secrets/generate-secrets.sh"
+      - "kubernetes/**"
+      - "scripts/ci/validate_database_list_consistency.py"
+      - "scripts/ci/test_validate_database_list_consistency.py"
+  push:
+    paths:
+      - "kubernetes/helm-charts/lante-erp-platform/values.yaml"
+      - "kubernetes/secrets/generate-secrets.sh"
+      - "kubernetes/**"
+      - "scripts/ci/validate_database_list_consistency.py"
+      - "scripts/ci/test_validate_database_list_consistency.py"
+
+jobs:
+  check-database-list-consistency:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run script's own unit tests
+        run: python3 -m unittest test_validate_database_list_consistency -v
+        working-directory: scripts/ci
+      - name: Validate actual repo database lists
+        run: python3 scripts/ci/validate_database_list_consistency.py

@@ -1,0 +1,104 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "crm-service.fullname" . }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "crm-service.labels" . | nindent 4 }}
+spec:
+  {{- if not .Values.autoscaling.enabled }}
+  replicas: {{ .Values.replicaCount }}
+  {{- end }}
+  selector:
+    matchLabels:
+      {{- include "crm-service.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "8080"
+        prometheus.io/path: "/metrics"
+      labels:
+        {{- include "crm-service.selectorLabels" . | nindent 8 }}
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      serviceAccountName: {{ include "crm-service.serviceAccountName" . }}
+      containers:
+      - name: crm-service
+        image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+        imagePullPolicy: {{ .Values.image.pullPolicy }}
+        ports:
+        - name: http
+          containerPort: {{ .Values.service.targetPort }}
+          protocol: TCP
+        startupProbe:
+          httpGet:
+            path: /health
+            port: http
+          failureThreshold: 30
+          periodSeconds: 10
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: http
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: http
+          initialDelaySeconds: 10
+          periodSeconds: 5
+          timeoutSeconds: 3
+          failureThreshold: 3
+        resources:
+          {{- toYaml .Values.resources | nindent 12 }}
+        env:
+          - name: ASPNETCORE_ENVIRONMENT
+            value: "Production"
+          - name: ASPNETCORE_URLS
+            value: "http://+:8080"
+          - name: JWT__Issuer
+            value: "LanteUserService"
+          - name: JWT__Audience
+            value: "LanteUserService"
+          - name: JWT__JwksUrl
+            value: "http://lante-user-service:8080/.well-known/jwks.json"
+          - name: JwtSettings__Issuer
+            value: "LanteUserService"
+          - name: JwtSettings__Audience
+            value: "LanteUserService"
+          # CRM owns its schema-per-tenant provisioning; DefaultConnection needs DDL rights
+          # (CREATE SCHEMA + migrations), so it uses the admin connection like the other services.
+          # AppConnection is the least-privilege runtime connection the tenant interceptor uses.
+          - name: ConnectionStrings__DefaultConnection
+            valueFrom:
+              secretKeyRef:
+                name: lante-erp-secrets
+                key: CRM_DB_CONNECTION
+          - name: ConnectionStrings__AppConnection
+            valueFrom:
+              secretKeyRef:
+                name: lante-erp-secrets
+                key: CRM_APP_CONNECTION
+          - name: InternalServices__ServiceKey
+            valueFrom:
+              secretKeyRef:
+                name: lante-erp-secrets
+                key: INTERNAL_SERVICE_KEY
+          # C5/C13 cross-module seams — in-cluster service DNS. Empty → seam degrades to no-op.
+          - name: FinanceService__BaseUrl
+            value: {{ .Values.crm.financeServiceBaseUrl | quote }}
+          - name: OperationsService__BaseUrl
+            value: {{ .Values.crm.operationsServiceBaseUrl | quote }}
+        volumeMounts:
+          - name: tmp
+            mountPath: /tmp
+      volumes:
+        - name: tmp
+          emptyDir: {}

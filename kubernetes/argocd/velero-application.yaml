@@ -1,0 +1,96 @@
+# Bootstrap file — like lante-erp-application.yaml, applied manually ONCE
+# (`kubectl apply -f kubernetes/argocd/velero-application.yaml`) to register the Application
+# with ArgoCD. Deploys Velero's own official Helm chart (external repo) into new-erp, backed by
+# the self-hosted MinIO instance in kubernetes/velero/ (see minio-application.yaml) — no B2/real
+# offsite destination exists yet, this is an interim local target. See GitHub issue #200.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: lante-backup-velero
+  namespace: argocd
+  labels:
+    app.kubernetes.io/name: lante-backup-velero
+    app.kubernetes.io/part-of: lante-erp
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+  source:
+    repoURL: https://vmware-tanzu.github.io/helm-charts
+    chart: velero
+    targetRevision: 12.1.0
+    helm:
+      values: |
+        initContainers:
+          - name: velero-plugin-for-aws
+            image: docker.io/velero/velero-plugin-for-aws:v1.14.2
+            imagePullPolicy: IfNotPresent
+            volumeMounts:
+              - mountPath: /target
+                name: plugins
+
+        credentials:
+          existingSecret: lante-backup-minio-credentials
+
+        configuration:
+          backupStorageLocation:
+            - name: default
+              provider: aws
+              bucket: lante-velero-uploads
+              config:
+                region: minio
+                s3ForcePathStyle: "true"
+                # In-cluster self-hosted MinIO (kubernetes/velero/) — an interim target until a
+                # real offsite destination (e.g. Backblaze B2) is provisioned. Swapping this for
+                # B2 later is a config change here, not a redesign.
+                s3Url: https://lante-backup-minio.new-erp.svc:9000
+                # MinIO's cert is self-signed (see kubernetes/velero/templates/minio-tls-secret.yaml)
+                # — pgBackRest, added alongside this in the same PR, hard-requires TLS with no
+                # plain-HTTP option, so MinIO now serves HTTPS-only and this had to move off the
+                # plain http:// it started with.
+                insecureSkipTLSVerify: "true"
+          volumeSnapshotLocation: []
+
+        # File-System-Backup (Kopia) is required, not optional, here — this cluster's storage
+        # class (local-path) has no VolumeSnapshot CRDs at all, confirmed live.
+        deployNodeAgent: true
+
+        schedules:
+          daily-uploads:
+            schedule: "30 2 * * *"
+            template:
+              includedNamespaces:
+                - new-erp
+              # Deliberately NOT true: that would sweep every PVC in the namespace, including
+              # the live Postgres and Redis data directories — not crash-consistent, and
+              # entirely redundant with the pgBackRest mechanism (a separate PR) for Postgres
+              # anyway. Only the 8 upload-owning Deployments carry the
+              # `backup.velero.io/backup-volumes: uploads` pod annotation (see
+              # lante-erp-platform/values.yaml), so only those volumes are ever touched here —
+              # this is what actually enforces the scope, not the namespace selection above.
+              defaultVolumesToFsBackup: false
+              ttl: "720h0m0s"
+
+        resources:
+          requests: { cpu: 100m, memory: 128Mi }
+          limits: { cpu: 500m, memory: 512Mi }
+
+        nodeAgent:
+          resources:
+            requests: { cpu: 100m, memory: 128Mi }
+            limits: { cpu: 1000m, memory: 1Gi }
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: new-erp
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+    retry:
+      limit: 5
+      backoff:
+        duration: 5s
+        factor: 2
+        maxDuration: 3m

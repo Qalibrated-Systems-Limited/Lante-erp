@@ -1,0 +1,98 @@
+name: Build & Deploy Gateway Service
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - packages/LanteGateway/**
+      - .github/workflows/build-gateway-service.yml
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: lante-africa/lante-erp/gateway-service
+
+jobs:
+  # yarp.json exists twice: packages/LanteGateway/src/LanteGateway/yarp.json (what a developer
+  # edits, and what's baked into the Docker image) and kubernetes/helm-charts/gateway-service/yarp.json
+  # (what the chart's ConfigMap actually mounts over /app/yarp.json at runtime, deliberately, so
+  # ops can hot-patch routes without a rebuild — Program.cs loads it with reloadOnChange: true).
+  # The mount means the CHART copy is what's actually live, so an edit to only the source copy
+  # (easy to do — it's the one in packages/, right next to the code) silently never reaches
+  # production. This happened for real: #195 (calibration-certificate routes) and, found the same
+  # day as this job was added, #198/#225 (swagger routes + 2 more routes, all reachable only in
+  # the source copy). Auto-syncing here means a human only ever has to edit one file.
+  sync-chart-config:
+    if: github.repository == 'LANTE-AFRICA/Lante-erp'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          ref: main
+
+      - name: Sync yarp.json to the Helm chart if it has drifted
+        run: |
+          SRC="packages/LanteGateway/src/LanteGateway/yarp.json"
+          DST="kubernetes/helm-charts/gateway-service/yarp.json"
+          if cmp -s "$SRC" "$DST"; then
+            echo "Already in sync — nothing to do."
+            exit 0
+          fi
+          cp "$SRC" "$DST"
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add "$DST"
+          git commit -m "ci: sync gateway yarp.json to Helm chart"
+          for i in 1 2 3 4 5; do
+            git push origin main && break
+            echo "Push rejected (attempt $i) — rebasing on latest main and retrying..."
+            git pull --rebase origin main
+          done
+
+  build:
+    if: github.repository == 'LANTE-AFRICA/Lante-erp'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: docker/metadata-action@v5
+        id: meta
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          tags: |
+            type=ref,event=branch
+            type=sha,prefix=main-,format=short
+
+      - uses: docker/build-push-action@v5
+        with:
+          context: ./packages/LanteGateway/src/LanteGateway
+          file: ./packages/LanteGateway/src/LanteGateway/Dockerfile
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+
+  deploy:
+    # Needs sync-chart-config too, not just build: deploy-to-kubernetes.yml does its own fresh
+    # checkout of main and repackages this chart from whatever's on disk at that point — it must
+    # run after the sync commit lands, or it packages the stale chart copy.
+    needs: [build, sync-chart-config]
+    permissions:
+      contents: write
+      packages: read
+    uses: ./.github/workflows/deploy-to-kubernetes.yml
+    with:
+      service-name: gateway

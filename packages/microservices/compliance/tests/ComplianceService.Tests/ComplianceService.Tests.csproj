@@ -1,0 +1,35 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <IsPackable>false</IsPackable>
+    <IsTestProject>true</IsTestProject>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- Core only, plus Infrastructure for ComplianceAuditTests: the SaveChanges interceptor lives
+         there and needs a real DbContext to prove it writes in the same save. Everything else here
+         stays pure, and keeping that reference narrow means this project cannot quietly grow into a
+         full integration harness that needs a database to run. -->
+    <ProjectReference Include="..\..\src\ComplianceService.Core\ComplianceService.Core.csproj" />
+    <ProjectReference Include="..\..\src\ComplianceService.Infrastructure\ComplianceService.Infrastructure.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.8.0" />
+    <PackageReference Include="xunit" Version="2.6.3" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="2.5.5">
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+      <PrivateAssets>all</PrivateAssets>
+    </PackageReference>
+    <PackageReference Include="FluentAssertions" Version="6.12.0" />
+    <!-- For ComplianceAuditTests: the interceptor adds entities during SavingChanges, and whether
+         those additions are written in the same save is a property of the real save pipeline, not
+         of an in-memory dictionary. Same reasoning as FinanceService.Tests. -->
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="9.0.6" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Relational" Version="9.0.6" />
+  </ItemGroup>
+
+</Project>

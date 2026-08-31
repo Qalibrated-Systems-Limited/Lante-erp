@@ -1,0 +1,166 @@
+name: Deploy to Kubernetes
+
+on:
+  workflow_call:
+    inputs:
+      service-name:
+        description: 'Service name (frontend, gateway, user-service, operations, crm, procurement, hr, ticketing, fleet, license, stores, hse, compliance, finance, subcontracts, reporting)'
+        required: true
+        type: string
+
+jobs:
+  deploy:
+    if: github.repository == 'LANTE-AFRICA/Lante-erp'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    concurrency:
+      group: helm-chart-update-${{ inputs.service-name }}
+      cancel-in-progress: false
+    permissions:
+      contents: write
+      packages: read
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          ref: main
+
+      - name: Compute image tag
+        id: tag
+        run: echo "value=main-$(echo "${{ github.sha }}" | cut -c1-7)" >> $GITHUB_OUTPUT
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Verify image exists in GHCR
+        run: |
+          SERVICE="${{ inputs.service-name }}"
+          TAG="${{ steps.tag.outputs.value }}"
+          case "$SERVICE" in
+            frontend)     IMAGE_NAME="frontend-service"  ;;
+            gateway)      IMAGE_NAME="gateway-service"   ;;
+            user-service) IMAGE_NAME="user-service"      ;;
+            operations)   IMAGE_NAME="operation-service" ;;
+            crm)          IMAGE_NAME="crm-service"       ;;
+            procurement)  IMAGE_NAME="procurement-service" ;;
+            hr)           IMAGE_NAME="hr-service"        ;;
+            ticketing)    IMAGE_NAME="ticketing-service" ;;
+            fleet)        IMAGE_NAME="fleet-service"     ;;
+            license)      IMAGE_NAME="license-service"   ;;
+            finance)      IMAGE_NAME="finance-service"   ;;
+            stores)       IMAGE_NAME="store-service"     ;;
+            hse)          IMAGE_NAME="hse-service"        ;;
+            compliance)   IMAGE_NAME="compliance-service" ;;
+            subcontracts) IMAGE_NAME="subcontracts-service" ;;
+            reporting)    IMAGE_NAME="reporting-service"   ;;
+            *) echo "❌ Unknown service-name '$SERVICE' — add it to the case statement in deploy-to-kubernetes.yml"; exit 1 ;;
+          esac
+          IMAGE="ghcr.io/lante-africa/lante-erp/${IMAGE_NAME}:${TAG}"
+          echo "Verifying: $IMAGE"
+          docker manifest inspect "$IMAGE" || { echo "❌ Image not found — deploy aborted to prevent broken rollout"; exit 1; }
+
+      - name: Install yq
+        run: |
+          wget -qO /usr/local/bin/yq https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64
+          chmod +x /usr/local/bin/yq
+
+      - name: Update image tag and repackage chart
+        run: |
+          SERVICE="${{ inputs.service-name }}"
+          TAG="${{ steps.tag.outputs.value }}"
+          CHARTS_DIR="kubernetes/helm-charts/lante-erp-platform/charts"
+
+          case "$SERVICE" in
+            frontend)
+              YQ_PATH=".frontendService.image.tag"
+              HELM_CHART="frontend-service"
+              ;;
+            gateway)
+              YQ_PATH=".gateway.image.tag"
+              HELM_CHART="gateway-service"
+              ;;
+            user-service)
+              YQ_PATH=".userService.image.tag"
+              HELM_CHART="user-service"
+              ;;
+            operations)
+              YQ_PATH=".operationService.image.tag"
+              HELM_CHART="operation-service"
+              ;;
+            crm)
+              YQ_PATH=".crmService.image.tag"
+              HELM_CHART="crm-service"
+              ;;
+            procurement)
+              YQ_PATH=".procurementService.image.tag"
+              HELM_CHART="procurement-service"
+              ;;
+            hr)
+              YQ_PATH=".hrService.image.tag"
+              HELM_CHART="hr-service"
+              ;;
+            ticketing)
+              YQ_PATH=".ticketingService.image.tag"
+              HELM_CHART="ticketing-service"
+              ;;
+            fleet)
+              YQ_PATH=".fleetService.image.tag"
+              HELM_CHART="fleet-service"
+              ;;
+            license)
+              YQ_PATH=".licenseService.image.tag"
+              HELM_CHART="license-service"
+              ;;
+            finance)
+              YQ_PATH=".financeService.image.tag"
+              HELM_CHART="finance-service"
+              ;;
+            stores)
+              YQ_PATH=".storeService.image.tag"
+              HELM_CHART="store-service"
+              ;;
+            hse)
+              YQ_PATH=".hseService.image.tag"
+              HELM_CHART="hse-service"
+              ;;
+            compliance)
+              YQ_PATH=".complianceService.image.tag"
+              HELM_CHART="compliance-service"
+              ;;
+            subcontracts)
+              YQ_PATH=".subcontractsService.image.tag"
+              HELM_CHART="subcontracts-service"
+              ;;
+            reporting)
+              YQ_PATH=".reportingService.image.tag"
+              HELM_CHART="reporting-service"
+              ;;
+            *)
+              echo "❌ Unknown service-name '$SERVICE' — add it to the case statement in deploy-to-kubernetes.yml"
+              exit 1
+              ;;
+          esac
+
+          yq e "${YQ_PATH} = \"${TAG}\"" -i kubernetes/helm-charts/lante-erp-platform/values.yaml
+          helm package kubernetes/helm-charts/${HELM_CHART} --destination "$CHARTS_DIR"
+          echo "Updated ${SERVICE} → ${TAG} and repackaged chart"
+
+      - name: Commit and push
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add kubernetes/helm-charts/
+          git diff --staged --quiet && { echo "No changes — tag already up to date"; exit 0; }
+          git commit -m "ci: update ${{ inputs.service-name }} image tag to ${{ steps.tag.outputs.value }} [skip ci]"
+          for i in 1 2 3 4 5; do
+            git push origin main && break
+            echo "Push rejected (attempt $i) — rebasing on latest main and retrying..."
+            git pull --rebase origin main
+          done
+          echo "Pushed — ArgoCD will detect the change and redeploy"

@@ -1,0 +1,136 @@
+{{- if .Values.backups.enabled }}
+# Logical, per-database dumps — kept alongside the (separate, PR 5) physical/WAL mechanism for
+# granular single-database restores. The database list is queried live from pg_database every
+# run, never hardcoded — see scripts/ci/validate_database_list_consistency.py and its docstring
+# for exactly why that matters here.
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: lante-backup-logical-dumps
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    {{- include "lante-erp-platform.labels" . | nindent 4 }}
+    app.kubernetes.io/name: lante-backup-logical-dumps
+spec:
+  schedule: {{ .Values.backups.logicalDumps.schedule | quote }}
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      ttlSecondsAfterFinished: 3600
+      template:
+        metadata:
+          labels:
+            app.kubernetes.io/name: lante-backup-logical-dumps
+        spec:
+          restartPolicy: OnFailure
+          serviceAccountName: lante-backup
+          volumes:
+            # A durable local PVC, not emptyDir — until an offsite (B2) destination exists, this
+            # is the ONLY copy of these dumps, so it must survive the Job pod finishing. This is
+            # explicitly an interim/local safety net (protects against accidental deletes/bad
+            # migrations, NOT against this node failing) — the moment lante-backup-b2-credentials
+            # exists, the upload step below starts shipping the same dumps offsite automatically,
+            # no config change needed beyond creating that secret.
+            - name: dumps
+              persistentVolumeClaim:
+                claimName: lante-backup-storage
+          initContainers:
+            # Dumps every lante_* database (discovered live, not hardcoded) plus a manifest
+            # per database recording counts read from the LIVE source at dump time — not from
+            # the dump artifact afterwards. A pg_dump that silently captures almost nothing
+            # (e.g. a permissions problem leaving a schema unreadable) must not be able to
+            # record its own under-capture as correct.
+            - name: dump
+              image: docker.io/bitnami/postgresql:latest
+              env:
+                - name: DB_USER
+                  valueFrom: { secretKeyRef: { name: lante-erp-secrets, key: DB_USER } }
+                - name: DB_PASSWORD
+                  valueFrom: { secretKeyRef: { name: lante-erp-secrets, key: DB_PASSWORD } }
+                - name: RETENTION_DAYS
+                  value: {{ .Values.backups.logicalDumps.retentionDays | quote }}
+              volumeMounts:
+                - name: dumps
+                  mountPath: /dumps
+              command:
+                - /bin/bash
+                - -ec
+                - |
+                  export PGPASSWORD="$DB_PASSWORD"
+                  DEST="/dumps/$(date -u +%F)"
+                  mkdir -p "$DEST"
+
+                  DATABASES="$(psql -h lante-postgresql -U "$DB_USER" -d postgres -Atc \
+                    "SELECT datname FROM pg_database WHERE datname LIKE 'lante_%' AND datistemplate = false ORDER BY datname")"
+                  echo "Databases to dump: $DATABASES"
+
+                  for db in $DATABASES; do
+                    echo "Recording live manifest for ${db}..."
+                    schema_count="$(psql -h lante-postgresql -U "$DB_USER" -d "$db" -Atc \
+                      "SELECT count(*) FROM information_schema.schemata WHERE schema_name LIKE 'tenant_%'")"
+                    table_count="$(psql -h lante-postgresql -U "$DB_USER" -d "$db" -Atc \
+                      "SELECT count(*) FROM information_schema.tables WHERE table_schema LIKE 'tenant_%' OR table_schema = 'public'")"
+
+                    echo "Dumping ${db} (tenant_schema_count=${schema_count}, table_count=${table_count})..."
+                    pg_dump -h lante-postgresql -U "$DB_USER" -d "$db" -F c -f "$DEST/${db}.dump"
+
+                    cat > "$DEST/${db}.manifest.json" <<EOF
+                  {"database":"${db}","dumped_at":"$(date -u +%FT%TZ)","tenant_schema_count":${schema_count},"table_count":${table_count}}
+                  EOF
+                  done
+
+                  cd "$DEST" && sha256sum ./*.dump ./*.manifest.json > checksums.txt
+                  echo "$(date -u +%F)" > /dumps/latest.txt
+                  echo "Dump complete: $DEST"
+                  ls -lh "$DEST"
+
+                  echo "Pruning local dumps older than ${RETENTION_DAYS:-1825} days..."
+                  find /dumps -mindepth 1 -maxdepth 1 -type d -mtime +"${RETENTION_DAYS:-1825}" -exec rm -rf {} +
+          containers:
+            # Ships whatever the dump initContainer produced offsite to B2 — but as of 2026-08-18
+            # no B2 account exists yet, so this deliberately soft-skips (logs clearly, exits 0)
+            # rather than failing the Job when the credentials secret isn't populated. The dumps
+            # already landed durably on the local PVC above regardless — that's the real interim
+            # protection. Once lante-backup-b2-credentials exists, this starts actually shipping
+            # the same dumps offsite with no other change needed. Revisit turning a missing
+            # secret back into a hard failure once B2 is expected to always be configured.
+            - name: upload
+              image: docker.io/rclone/rclone:1.68
+              env:
+                - name: RCLONE_CONFIG_B2_TYPE
+                  value: "s3"
+                - name: RCLONE_CONFIG_B2_PROVIDER
+                  value: "Other"
+                - name: RCLONE_CONFIG_B2_ENDPOINT
+                  value: {{ printf "https://%s" .Values.backups.b2.endpoint | quote }}
+                - name: RCLONE_CONFIG_B2_REGION
+                  value: {{ .Values.backups.b2.region | quote }}
+                - name: RCLONE_CONFIG_B2_ACCESS_KEY_ID
+                  valueFrom: { secretKeyRef: { name: lante-backup-b2-credentials, key: AWS_ACCESS_KEY_ID, optional: true } }
+                - name: RCLONE_CONFIG_B2_SECRET_ACCESS_KEY
+                  valueFrom: { secretKeyRef: { name: lante-backup-b2-credentials, key: AWS_SECRET_ACCESS_KEY, optional: true } }
+                - name: B2_BUCKET
+                  value: {{ .Values.backups.b2.bucket | quote }}
+                - name: RETENTION_DAYS
+                  value: {{ .Values.backups.logicalDumps.retentionDays | quote }}
+              volumeMounts:
+                - name: dumps
+                  mountPath: /dumps
+              command:
+                - /bin/sh
+                - -ec
+                - |
+                  if [ -z "$RCLONE_CONFIG_B2_ACCESS_KEY_ID" ]; then
+                    echo "No B2 credentials configured (lante-backup-b2-credentials doesn't exist yet) — dumps are kept on the local lante-backup-storage PVC only. This is expected for now, not a failure. Create that secret to start shipping dumps offsite."
+                    exit 0
+                  fi
+                  DATE="$(cat /dumps/latest.txt)"
+                  echo "Uploading $DATE to b2:${B2_BUCKET}/logical-dumps/${DATE}/ ..."
+                  rclone copy "/dumps/${DATE}" "b2:${B2_BUCKET}/logical-dumps/${DATE}/" --s3-no-check-bucket
+                  echo "Upload complete."
+              resources:
+                requests: { cpu: 50m, memory: 64Mi }
+                limits: { cpu: 250m, memory: 256Mi }
+{{- end }}

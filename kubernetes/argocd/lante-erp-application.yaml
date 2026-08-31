@@ -1,0 +1,47 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: lante-erp
+  namespace: argocd
+  labels:
+    app.kubernetes.io/name: lante-erp
+    app.kubernetes.io/part-of: lante-erp
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/LANTE-AFRICA/Lante-erp.git
+    targetRevision: main
+    path: kubernetes/helm-charts/lante-erp-platform
+    helm:
+      valueFiles:
+        - values.yaml
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: new-erp
+  syncPolicy:
+    # No `automated:` block, deliberately (#221) — main pushes still update this Application's
+    # values.yaml (deploy-to-kubernetes.yml keeps committing image tags on every merge), but
+    # ArgoCD now shows the resulting diff as OutOfSync and waits for an explicit
+    # `argocd app sync lante-erp` (or the equivalent UI click) rather than applying it
+    # immediately. That also removes the old `selfHeal: true`, which used to revert a manual
+    # hotfix within minutes — there is no longer a fully-automatic path back to a bad state
+    # while someone is mid-hotfix. Staging (lante-erp-staging-application.yaml) keeps
+    # `automated` so it still shows what's about to ship.
+    syncOptions:
+      - CreateNamespace=true
+      - PrunePropagationPolicy=foreground
+      - PruneLast=true
+      - RespectIgnoreDifferences=true
+    retry:
+      limit: 5
+      backoff:
+        duration: 5s
+        factor: 2
+        maxDuration: 3m
+  ignoreDifferences:
+    - group: apps
+      kind: Deployment
+      jsonPointers:
+        - /spec/replicas

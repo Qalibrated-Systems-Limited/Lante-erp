@@ -1,0 +1,64 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: lante-backup-minio
+  namespace: {{ .Values.namespace }}
+  labels:
+    app.kubernetes.io/name: lante-backup-minio
+    app.kubernetes.io/part-of: lante-erp
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: lante-backup-minio
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: lante-backup-minio
+    spec:
+      containers:
+        - name: minio
+          image: {{ .Values.minio.image | quote }}
+          args: ["server", "/data", "--console-address", ":9001", "--certs-dir", "/certs"]
+          envFrom:
+            - secretRef:
+                name: lante-backup-minio-credentials
+          ports:
+            - name: s3
+              containerPort: 9000
+            - name: console
+              containerPort: 9001
+          volumeMounts:
+            - name: data
+              mountPath: /data
+            - name: certs
+              mountPath: /certs
+              readOnly: true
+          # TLS is on (see minio-tls-secret.yaml for why: pgBackRest hard-requires it, unlike
+          # Velero) so probes must speak HTTPS. Kubelet's httpGet probe never validates certs,
+          # so the self-signed cert here needs no special handling for probes specifically.
+          readinessProbe:
+            httpGet: { path: /minio/health/ready, port: s3, scheme: HTTPS }
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            httpGet: { path: /minio/health/live, port: s3, scheme: HTTPS }
+            initialDelaySeconds: 10
+            periodSeconds: 20
+          resources:
+            requests: { cpu: 100m, memory: 256Mi }
+            limits: { cpu: 500m, memory: 1Gi }
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: lante-backup-minio
+        - name: certs
+          secret:
+            secretName: lante-backup-minio-tls
+            items:
+              - key: tls.crt
+                path: public.crt
+              - key: tls.key
+                path: private.key

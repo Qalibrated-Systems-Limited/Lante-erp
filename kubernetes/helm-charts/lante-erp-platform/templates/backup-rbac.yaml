@@ -1,0 +1,58 @@
+{{- if .Values.backups.enabled }}
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: lante-backup
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    {{- include "lante-erp-platform.labels" . | nindent 4 }}
+    app.kubernetes.io/name: lante-backup
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: lante-backup
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    {{- include "lante-erp-platform.labels" . | nindent 4 }}
+    app.kubernetes.io/name: lante-backup
+rules:
+  # Read-only, and scoped to exactly the two secrets backup jobs need — the DB admin
+  # credentials (to connect/dump) and the B2 credentials (which may not exist yet; RBAC
+  # permission to read a secret that doesn't exist is harmless, the pod-level `optional: true`
+  # on each secretKeyRef is what actually makes a missing secret non-fatal).
+  - apiGroups: [""]
+    resources: ["secrets"]
+    verbs: ["get"]
+    resourceNames: ["lante-erp-secrets", "lante-backup-b2-credentials"]
+  # Needed for the pgBackRest CronJob to `kubectl exec` into the live Postgres pod — pgBackRest's
+  # own remote-repository protocol (`pg1-host`) is SSH/TLS-server only, not plain PostgreSQL
+  # TCP+password, so a separate pod cannot drive backups over a normal DB connection. Running the
+  # pgbackrest binary inside the already-configured lante-postgresql-0 pod via exec is the only
+  # architecturally valid approach — scoped to that one pod, nothing broader.
+  - apiGroups: [""]
+    resources: ["pods"]
+    verbs: ["get"]
+    resourceNames: ["lante-postgresql-0"]
+  - apiGroups: [""]
+    resources: ["pods/exec"]
+    verbs: ["create"]
+    resourceNames: ["lante-postgresql-0"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: lante-backup
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    {{- include "lante-erp-platform.labels" . | nindent 4 }}
+    app.kubernetes.io/name: lante-backup
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: lante-backup
+subjects:
+  - kind: ServiceAccount
+    name: lante-backup
+    namespace: {{ .Values.global.namespace }}
+{{- end }}

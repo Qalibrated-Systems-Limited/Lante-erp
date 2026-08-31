@@ -1,0 +1,66 @@
+name: Build & Deploy User Service
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - packages/microservices/masterdata/user-service/**
+      - .github/workflows/build-user-service.yml
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: lante-africa/lante-erp/user-service
+
+jobs:
+  build:
+    if: github.repository == 'LANTE-AFRICA/Lante-erp'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Block md5() in migrations
+        run: |
+          set -e
+          matches=$(grep -rniE "md5\s*\(" --include="*.cs" packages/microservices/masterdata/user-service/src/*/Migrations 2>/dev/null || true)
+          if [ -n "$matches" ]; then
+            echo "::error::Found md5() in a migration — this cluster's Postgres rejects it at runtime (XX000: could not compute MD5 hash: unsupported), which already crash-looped fleet-service and store-service in production. Use gen_random_uuid()::text instead (built into Postgres core since v13, no extension needed)."
+            echo "$matches"
+            exit 1
+          fi
+
+      - uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: docker/metadata-action@v5
+        id: meta
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          tags: |
+            type=ref,event=branch
+            type=sha,prefix=main-,format=short
+
+      - uses: docker/build-push-action@v5
+        with:
+          context: ./packages/microservices/masterdata/user-service
+          file: ./packages/microservices/masterdata/user-service/Dockerfile
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+
+  deploy:
+    needs: build
+    permissions:
+      contents: write
+      packages: read
+    uses: ./.github/workflows/deploy-to-kubernetes.yml
+    with:
+      service-name: user-service

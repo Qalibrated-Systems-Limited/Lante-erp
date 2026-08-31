@@ -1,0 +1,17 @@
+# Reuses the existing letsencrypt-prod ClusterIssuer from qalitrackservices.
+# If deploying to a fresh cluster, apply this to create it.
+---
+apiVersion: cert-manager.io/v1
+kind: ClusterIssuer
+metadata:
+  name: letsencrypt-prod
+spec:
+  acme:
+    server: https://acme-v02.api.letsencrypt.org/directory
+    email: admin@qalibrated.co.ke
+    privateKeySecretRef:
+      name: letsencrypt-prod
+    solvers:
+      - http01:
+          ingress:
+            class: nginx

@@ -1,0 +1,815 @@
+# Lante ERP — service stack. All secrets/config come from Deployment/.env (see DEPLOYMENT.md).
+# Host port mappings (5xxx DBs, 808x services) are for local/admin access — do NOT expose them
+# publicly in production; put a reverse proxy in front of the gateway (5001) + frontend only.
+
+services:
+  # ─── Postgres: User / Control-plane ───────────────────────────────────────────
+  postgres-lante-user:
+    image: postgres:15
+    container_name: lante-postgres
+    ports:
+      - "5435:5432"
+    environment:
+      POSTGRES_DB: lante_userservice
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      QALICORE_APP_PASSWORD: ${APP_DB_PASSWORD}
+    volumes:
+      - lante_postgres_data:/var/lib/postgresql/data
+      - ./init/create-app-role.sh:/docker-entrypoint-initdb.d/create-app-role.sh:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d lante_userservice"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  redis-lante:
+    image: redis:7
+    container_name: lante-redis
+    ports:
+      - "6380:6379"
+    command: redis-server --requirepass ${REDIS_PASSWORD}
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD}", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  user-service-api:
+    build:
+      context: ../packages/microservices/masterdata/user-service
+      dockerfile: Dockerfile
+    container_name: lante-user-service
+    ports:
+      - "8081:8080"
+    depends_on:
+      postgres-lante-user:
+        condition: service_healthy
+      redis-lante:
+        condition: service_healthy
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Production
+      - ASPNETCORE_URLS=http://+:8080
+      - ConnectionStrings__DefaultConnection=Host=postgres-lante-user;Port=5432;Database=lante_userservice;Username=${DB_USER};Password=${DB_PASSWORD}
+      - ConnectionStrings__AppConnection=Host=postgres-lante-user;Port=5432;Database=lante_userservice;Username=${APP_DB_USER};Password=${APP_DB_PASSWORD}
+      - ConnectionStrings__Redis=redis-lante:6379,password=${REDIS_PASSWORD}
+      - UseRedis=true
+      - JWT__SecretKey=${JWT_SECRET}
+      - JWT__Issuer=${JWT_ISSUER}
+      - JWT__Audience=${JWT_AUDIENCE}
+      - JWT__TokenExpiryMinutes=${JWT_EXPIRY_MINUTES}
+      - JwtSettings__SecretKey=${JWT_SECRET}
+      - JwtSettings__Issuer=${JWT_ISSUER}
+      - JwtSettings__Audience=${JWT_AUDIENCE}
+      - JwtSettings__ExpiryInMinutes=${JWT_EXPIRY_MINUTES}
+      - Email__SmtpHost=${SMTP_HOST}
+      - Email__SmtpPort=${SMTP_PORT}
+      - Email__SmtpUsername=${SMTP_USERNAME}
+      - Email__SmtpPassword=${SMTP_PASSWORD}
+      - Email__FromEmail=${SMTP_FROM}
+      - Email__FromName=${SMTP_FROM_NAME}
+      # Schema-per-tenant provisioning orchestrator
+      - InternalServices__ServiceKey=${INTERNAL_SERVICE_KEY}
+      - ProvisioningTargets__ticketing=http://ticketing-service-api:8080
+      - ProvisioningTargets__operations=http://operations-service-api:8080
+      - ProvisioningTargets__crm=http://crm-service-api:8080
+      - ProvisioningTargets__procurement=http://procurement-service-api:8080
+      - ProvisioningTargets__hr=http://hr-service-api:8080
+      - ProvisioningTargets__finance=http://finance-service-api:8080
+      - ProvisioningTargets__fleet=http://fleet-service-api:8080
+      - ProvisioningTargets__licensing=http://license-service-api:8080
+      - ProvisioningTargets__stores=http://store-service-api:8080
+      - ProvisioningTargets__hse=http://hse-service-api:8080
+      - ProvisioningTargets__compliance=http://compliance-service-api:8080
+      - ProvisioningTargets__subcontracts=http://subcontracts-service-api:8080
+      - ProvisioningTargets__reporting=http://reporting-service-api:8080
+    restart: unless-stopped
+
+  # ─── Postgres: Licensing ──────────────────────────────────────────────────────
+  postgres-lante-license:
+    image: postgres:15
+    container_name: lante-postgres-license
+    ports:
+      - "5436:5432"
+    environment:
+      POSTGRES_DB: lante_licensing
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      QALICORE_APP_PASSWORD: ${APP_DB_PASSWORD}
+    volumes:
+      - lante_license_postgres_data:/var/lib/postgresql/data
+      - ./init/create-app-role.sh:/docker-entrypoint-initdb.d/create-app-role.sh:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d lante_licensing"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  license-service-api:
+    build:
+      context: ../packages/microservices/licensing
+      dockerfile: Dockerfile
+    container_name: lante-license-service
+    ports:
+      - "8084:8080"
+    depends_on:
+      postgres-lante-license:
+        condition: service_healthy
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Production
+      - ASPNETCORE_URLS=http://+:8080
+      - ConnectionStrings__DefaultConnection=Host=postgres-lante-license;Port=5432;Database=lante_licensing;Username=${DB_USER};Password=${DB_PASSWORD}
+      - ConnectionStrings__AppConnection=Host=postgres-lante-license;Port=5432;Database=lante_licensing;Username=${APP_DB_USER};Password=${APP_DB_PASSWORD}
+      - JwtSettings__SecretKey=${JWT_SECRET}
+      - JwtSettings__Issuer=${JWT_ISSUER}
+      - JwtSettings__Audience=${JWT_AUDIENCE}
+      - InternalServices__ServiceKey=${INTERNAL_SERVICE_KEY}
+      - License__PrivateKeyJwk=${LICENSE_PRIVATE_KEY_JWK}
+    restart: unless-stopped
+
+  # ─── Postgres: Ticketing ──────────────────────────────────────────────────────
+  postgres-lante-ticketing:
+    image: postgres:15
+    container_name: lante-postgres-ticketing
+    ports:
+      - "5437:5432"
+    environment:
+      POSTGRES_DB: lante_ticketing
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      QALICORE_APP_PASSWORD: ${APP_DB_PASSWORD}
+    volumes:
+      - lante_ticketing_postgres_data:/var/lib/postgresql/data
+      - ./init/create-app-role.sh:/docker-entrypoint-initdb.d/create-app-role.sh:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d lante_ticketing"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  ticketing-service-api:
+    build:
+      context: ../packages/microservices/ticketing
+      dockerfile: Dockerfile
+    container_name: lante-ticketing-service
+    ports:
+      - "8082:8080"
+    depends_on:
+      postgres-lante-ticketing:
+        condition: service_healthy
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Production
+      - ASPNETCORE_URLS=http://+:8080
+      - ConnectionStrings__DefaultConnection=Host=postgres-lante-ticketing;Port=5432;Database=lante_ticketing;Username=${DB_USER};Password=${DB_PASSWORD}
+      - ConnectionStrings__AppConnection=Host=postgres-lante-ticketing;Port=5432;Database=lante_ticketing;Username=${APP_DB_USER};Password=${APP_DB_PASSWORD}
+      - JWT__SecretKey=${JWT_SECRET}
+      - JWT__Issuer=${JWT_ISSUER}
+      - JWT__Audience=${JWT_AUDIENCE}
+      - JwtSettings__SecretKey=${JWT_SECRET}
+      - JwtSettings__Issuer=${JWT_ISSUER}
+      - JwtSettings__Audience=${JWT_AUDIENCE}
+      - UserService__BaseUrl=http://user-service-api:8080
+      - OperationsService__BaseUrl=http://operations-service-api:8080
+      - FleetService__BaseUrl=http://fleet-service-api:8080
+      - InternalServices__ServiceKey=${INTERNAL_SERVICE_KEY}
+      # D8-2/D8-3 — real CRM sink (closed-ticket interactions + resolved complaints)
+      - Integrations__Crm__Enabled=true
+      - CrmService__BaseUrl=http://crm-service-api:8080
+      - UPLOADS_PATH=/app/uploads
+      - Smtp__Host=${SMTP_HOST}
+      - Smtp__Port=${SMTP_PORT}
+      - Smtp__Username=${SMTP_USERNAME}
+      - Smtp__Password=${SMTP_PASSWORD}
+      - Smtp__From=${SMTP_FROM}
+      - Smtp__FromName=${SMTP_FROM_NAME}
+      - Smtp__Enabled=${SMTP_ENABLED}
+      - Sms__Enabled=${SMS_ENABLED}
+      - Sms__Tiara__BaseUrl=${TIARA_BASE_URL}
+      - Sms__Tiara__ApiKey=${TIARA_API_KEY}
+      - Sms__Tiara__SenderId=${TIARA_SENDER_ID}
+    volumes:
+      - lante_ticketing_uploads:/app/uploads
+    restart: unless-stopped
+
+  # ─── Postgres: Fleet ──────────────────────────────────────────────────────────
+  postgres-lante-fleet:
+    image: postgres:15
+    container_name: lante-postgres-fleet
+    ports:
+      - "5439:5432"
+    environment:
+      POSTGRES_DB: lante_fleetservice
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      QALICORE_APP_PASSWORD: ${APP_DB_PASSWORD}
+    volumes:
+      - lante_fleet_postgres_data:/var/lib/postgresql/data
+      - ./init/create-app-role.sh:/docker-entrypoint-initdb.d/create-app-role.sh:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d lante_fleetservice"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  fleet-service-api:
+    build:
+      context: ../packages/microservices/fleet-service
+      dockerfile: Dockerfile
+    container_name: lante-fleet-service
+    ports:
+      - "8085:8080"
+    depends_on:
+      postgres-lante-fleet:
+        condition: service_healthy
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Production
+      - ASPNETCORE_URLS=http://+:8080
+      - ConnectionStrings__DefaultConnection=Host=postgres-lante-fleet;Port=5432;Database=lante_fleetservice;Username=${DB_USER};Password=${DB_PASSWORD}
+      - ConnectionStrings__AppConnection=Host=postgres-lante-fleet;Port=5432;Database=lante_fleetservice;Username=${APP_DB_USER};Password=${APP_DB_PASSWORD}
+      - JWT__SecretKey=${JWT_SECRET}
+      - JWT__Issuer=${JWT_ISSUER}
+      - JWT__Audience=${JWT_AUDIENCE}
+      - TicketingService__BaseUrl=http://ticketing-service-api:8080
+      - UserService__BaseUrl=http://user-service-api:8080
+      - OperationsService__BaseUrl=http://operations-service-api:8080
+      - InternalServices__ServiceKey=${INTERNAL_SERVICE_KEY}
+      - Storage__BasePath=/app/uploads
+      - Storage__BaseUrl=${GATEWAY_PUBLIC_URL}
+    volumes:
+      - ./uploads/fleet:/app/uploads
+    restart: unless-stopped
+
+  # ─── Postgres: Operations ─────────────────────────────────────────────────────
+  postgres-lante-operations:
+    image: postgres:15
+    container_name: lante-postgres-operations
+    ports:
+      - "5438:5432"
+    environment:
+      POSTGRES_DB: lante_operations
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      QALICORE_APP_PASSWORD: ${APP_DB_PASSWORD}
+    volumes:
+      - lante_operations_postgres_data:/var/lib/postgresql/data
+      - ./init/create-app-role.sh:/docker-entrypoint-initdb.d/create-app-role.sh:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d lante_operations"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  operations-service-api:
+    build:
+      context: ../packages/microservices/operations
+      dockerfile: Dockerfile
+    container_name: lante-operations-service
+    ports:
+      - "8086:8080"
+    depends_on:
+      postgres-lante-operations:
+        condition: service_healthy
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Production
+      - ASPNETCORE_URLS=http://+:8080
+      - ConnectionStrings__DefaultConnection=Host=postgres-lante-operations;Port=5432;Database=lante_operations;Username=${DB_USER};Password=${DB_PASSWORD}
+      - ConnectionStrings__AppConnection=Host=postgres-lante-operations;Port=5432;Database=lante_operations;Username=${APP_DB_USER};Password=${APP_DB_PASSWORD}
+      - JWT__SecretKey=${JWT_SECRET}
+      - JWT__Issuer=${JWT_ISSUER}
+      - JWT__Audience=${JWT_AUDIENCE}
+      - JwtSettings__SecretKey=${JWT_SECRET}
+      - JwtSettings__Issuer=${JWT_ISSUER}
+      - JwtSettings__Audience=${JWT_AUDIENCE}
+      - UPLOADS_PATH=/app/uploads
+      - TicketingService__BaseUrl=http://ticketing-service-api:8080
+      - InternalServices__ServiceKey=${INTERNAL_SERVICE_KEY}
+      # O1/O6 — real CRM seam: customer verify + calibration recall
+      - Crm__Enabled=true
+      - CrmService__BaseUrl=http://crm-service-api:8080
+      # PR2 — real Finance seam: milestone/variation invoices + project labour journal
+      - Finance__Enabled=true
+      - FinanceService__BaseUrl=http://finance-service-api:8080
+      # PR2 — real HR seam: overtime pre-approval verification + payroll deductions
+      - Hr__Enabled=true
+      - HrService__BaseUrl=http://hr-service-api:8080
+    volumes:
+      - lante_operations_uploads:/app/uploads
+    restart: unless-stopped
+
+  # ─── Postgres: CRM & Sales ───────────────────────────────────────────────────
+  postgres-lante-crm:
+    image: postgres:15
+    container_name: lante-postgres-crm
+    ports:
+      - "5446:5432"
+    environment:
+      POSTGRES_DB: lante_crm
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      QALICORE_APP_PASSWORD: ${APP_DB_PASSWORD}
+    volumes:
+      - lante_crm_postgres_data:/var/lib/postgresql/data
+      - ./init/create-app-role.sh:/docker-entrypoint-initdb.d/create-app-role.sh:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d lante_crm"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  crm-service-api:
+    build:
+      context: ../packages/microservices/crm
+      dockerfile: Dockerfile
+    container_name: lante-crm-service
+    ports:
+      - "8092:8080"
+    depends_on:
+      postgres-lante-crm:
+        condition: service_healthy
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Production
+      - ASPNETCORE_URLS=http://+:8080
+      - ConnectionStrings__DefaultConnection=Host=postgres-lante-crm;Port=5432;Database=lante_crm;Username=${DB_USER};Password=${DB_PASSWORD}
+      - ConnectionStrings__AppConnection=Host=postgres-lante-crm;Port=5432;Database=lante_crm;Username=${APP_DB_USER};Password=${APP_DB_PASSWORD}
+      - JWT__SecretKey=${JWT_SECRET}
+      - JWT__Issuer=${JWT_ISSUER}
+      - JWT__Audience=${JWT_AUDIENCE}
+      - JwtSettings__SecretKey=${JWT_SECRET}
+      - JwtSettings__Issuer=${JWT_ISSUER}
+      - JwtSettings__Audience=${JWT_AUDIENCE}
+      - InternalServices__ServiceKey=${INTERNAL_SERVICE_KEY}
+      - FinanceService__BaseUrl=http://finance-service-api:8080
+      - OperationsService__BaseUrl=http://operations-service-api:8080
+    restart: unless-stopped
+
+  # ─── Postgres: Procurement & Supply Chain ────────────────────────────────────
+  postgres-lante-procurement:
+    image: postgres:15
+    container_name: lante-postgres-procurement
+    ports:
+      - "5448:5432"
+    environment:
+      POSTGRES_DB: lante_procurement
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      QALICORE_APP_PASSWORD: ${APP_DB_PASSWORD}
+    volumes:
+      - lante_procurement_postgres_data:/var/lib/postgresql/data
+      - ./init/create-app-role.sh:/docker-entrypoint-initdb.d/create-app-role.sh:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d lante_procurement"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  procurement-service-api:
+    build:
+      context: ../packages/microservices/procurement
+      dockerfile: Dockerfile
+    container_name: lante-procurement-service
+    ports:
+      - "8093:8080"
+    depends_on:
+      postgres-lante-procurement:
+        condition: service_healthy
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Production
+      - ASPNETCORE_URLS=http://+:8080
+      - ConnectionStrings__DefaultConnection=Host=postgres-lante-procurement;Port=5432;Database=lante_procurement;Username=${DB_USER};Password=${DB_PASSWORD}
+      - ConnectionStrings__AppConnection=Host=postgres-lante-procurement;Port=5432;Database=lante_procurement;Username=${APP_DB_USER};Password=${APP_DB_PASSWORD}
+      - JWT__SecretKey=${JWT_SECRET}
+      - JWT__Issuer=${JWT_ISSUER}
+      - JWT__Audience=${JWT_AUDIENCE}
+      - JwtSettings__SecretKey=${JWT_SECRET}
+      - JwtSettings__Issuer=${JWT_ISSUER}
+      - JwtSettings__Audience=${JWT_AUDIENCE}
+      - InternalServices__ServiceKey=${INTERNAL_SERVICE_KEY}
+      # P2 — Finance budget-check seam (hard budget block on PR submit)
+      - Finance__Enabled=true
+      - FinanceService__BaseUrl=http://finance-service-api:8080
+      # P9 — biannual supplier performance review scheduler (per tenant schema, once a half closes)
+      - Procurement__PerformanceReview__Enabled=true
+      - Procurement__PerformanceReview__IntervalHours=24
+      # DEC-B — READ-ONLY read of the stores supplier master for the ASR seed (nothing in stores is written)
+      - Stores__Enabled=true
+      - StoresService__BaseUrl=http://store-service-api:8080
+      # DEC-C — verify an LPO's Board Resolution against the compliance COMP-007 register (read-only)
+      - Compliance__Enabled=true
+      - ComplianceService__BaseUrl=http://compliance-service-api:8080
+    restart: unless-stopped
+
+  # ─── Postgres: HR & Payroll ──────────────────────────────────────────────────
+  postgres-lante-hr:
+    image: postgres:15
+    container_name: lante-postgres-hr
+    ports:
+      - "5449:5432"
+    environment:
+      POSTGRES_DB: lante_hr
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      QALICORE_APP_PASSWORD: ${APP_DB_PASSWORD}
+    volumes:
+      - lante_hr_postgres_data:/var/lib/postgresql/data
+      - ./init/create-app-role.sh:/docker-entrypoint-initdb.d/create-app-role.sh:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d lante_hr"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  hr-service-api:
+    build:
+      context: ../packages/microservices/hr
+      dockerfile: Dockerfile
+    container_name: lante-hr-service
+    ports:
+      - "8094:8080"
+    depends_on:
+      postgres-lante-hr:
+        condition: service_healthy
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Production
+      - ASPNETCORE_URLS=http://+:8080
+      - ConnectionStrings__DefaultConnection=Host=postgres-lante-hr;Port=5432;Database=lante_hr;Username=${DB_USER};Password=${DB_PASSWORD}
+      - ConnectionStrings__AppConnection=Host=postgres-lante-hr;Port=5432;Database=lante_hr;Username=${APP_DB_USER};Password=${APP_DB_PASSWORD}
+      - JWT__SecretKey=${JWT_SECRET}
+      - JWT__Issuer=${JWT_ISSUER}
+      - JWT__Audience=${JWT_AUDIENCE}
+      - JwtSettings__SecretKey=${JWT_SECRET}
+      - JwtSettings__Issuer=${JWT_ISSUER}
+      - JwtSettings__Audience=${JWT_AUDIENCE}
+      - InternalServices__ServiceKey=${INTERNAL_SERVICE_KEY}
+      # H1 — user-service seam: creates the new hire's login account + reads departments/branches
+      - UserService__Enabled=true
+      - UserService__BaseUrl=http://user-service-api:8080
+      # H2 — ticketing alert seam: probation-milestone and contract-expiry alerts land in the
+      # shared alert inbox (same channel compliance/hse/fleet use).
+      - TicketingService__BaseUrl=http://ticketing-service-api:8080
+      # H5 — finance seam: reads the chart of accounts for salary/statutory/deduction GL mapping.
+      # H6 adds the payroll journal + statutory remittance writes on the same base URL.
+      - FinanceService__BaseUrl=http://finance-service-api:8080
+      # H7 — mandatory-training evidence: HR owns the rule, hse and compliance own the records.
+      - HseService__BaseUrl=http://hse-service-api:8080
+      - ComplianceService__BaseUrl=http://compliance-service-api:8080
+      # H11 — CRM owns the sales target and attainment; HR reads them for commission.
+      - CrmService__BaseUrl=http://crm-service-api:8080
+    restart: unless-stopped
+
+  # ─── Postgres: Finance ────────────────────────────────────────────────────────
+  postgres-lante-finance:
+    image: postgres:15
+    container_name: lante-postgres-finance
+    ports:
+      - "5440:5432"
+    environment:
+      POSTGRES_DB: lante_finance
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    volumes:
+      - lante_finance_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d lante_finance"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  # ─── Postgres: Stores ─────────────────────────────────────────────────────────
+  postgres-lante-stores:
+    image: postgres:15
+    container_name: lante-postgres-stores
+    ports:
+      - "5444:5432"
+    environment:
+      POSTGRES_DB: lante_stores
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      QALICORE_APP_PASSWORD: ${APP_DB_PASSWORD}
+    volumes:
+      - lante_stores_postgres_data:/var/lib/postgresql/data
+      - ./init/create-app-role.sh:/docker-entrypoint-initdb.d/create-app-role.sh:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d lante_stores"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  finance-service-api:
+    build:
+      context: ../packages/microservices/finance
+      dockerfile: Dockerfile
+    container_name: lante-finance-service
+    ports:
+      - "8087:8080"
+    depends_on:
+      postgres-lante-finance:
+        condition: service_healthy
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Production
+      - ASPNETCORE_URLS=http://+:8080
+      - ConnectionStrings__DefaultConnection=Host=postgres-lante-finance;Port=5432;Database=lante_finance;Username=${DB_USER};Password=${DB_PASSWORD}
+      - ConnectionStrings__AppConnection=Host=postgres-lante-finance;Port=5432;Database=lante_finance;Username=${APP_DB_USER};Password=${APP_DB_PASSWORD}
+      - JWT__SecretKey=${JWT_SECRET}
+      - JWT__Issuer=${JWT_ISSUER}
+      - JWT__Audience=${JWT_AUDIENCE}
+      - JwtSettings__SecretKey=${JWT_SECRET}
+      - JwtSettings__Issuer=${JWT_ISSUER}
+      - JwtSettings__Audience=${JWT_AUDIENCE}
+      - InternalServices__ServiceKey=${INTERNAL_SERVICE_KEY}
+      - Finance__EnforceApprovalAuthority=${FIN_ENFORCE_AUTHORITY:-false}
+    restart: unless-stopped
+
+  store-service-api:
+    build:
+      context: ../packages/microservices/stores
+      dockerfile: Dockerfile
+    container_name: lante-store-service
+    ports:
+      - "8083:8080"
+    depends_on:
+      postgres-lante-stores:
+        condition: service_healthy
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Production
+      - ASPNETCORE_URLS=http://+:8080
+      - ConnectionStrings__DefaultConnection=Host=postgres-lante-stores;Port=5432;Database=lante_stores;Username=${DB_USER};Password=${DB_PASSWORD}
+      - ConnectionStrings__AppConnection=Host=postgres-lante-stores;Port=5432;Database=lante_stores;Username=${APP_DB_USER};Password=${APP_DB_PASSWORD}
+      - JWT__SecretKey=${JWT_SECRET}
+      - JWT__Issuer=${JWT_ISSUER}
+      - JWT__Audience=${JWT_AUDIENCE}
+      - JwtSettings__SecretKey=${JWT_SECRET}
+      - JwtSettings__Issuer=${JWT_ISSUER}
+      - JwtSettings__Audience=${JWT_AUDIENCE}
+      - InternalServices__ServiceKey=${INTERNAL_SERVICE_KEY}
+      - Storage__BasePath=/app/uploads
+      - Storage__BaseUrl=${GATEWAY_PUBLIC_URL}
+      # P5 (DEC-3) — notify procurement when an LPO-linked GRN passes inspection
+      - Procurement__Enabled=true
+      - ProcurementService__BaseUrl=http://procurement-service-api:8080
+    volumes:
+      - ./uploads/stores:/app/uploads
+    restart: unless-stopped
+
+  # ─── Postgres: HSE ────────────────────────────────────────────────────────────
+  postgres-lante-hse:
+    image: postgres:15
+    container_name: lante-postgres-hse
+    ports:
+      - "5442:5432"
+    environment:
+      POSTGRES_DB: lante_hse
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      QALICORE_APP_PASSWORD: ${APP_DB_PASSWORD}
+    volumes:
+      - lante_hse_postgres_data:/var/lib/postgresql/data
+      - ./init/create-app-role.sh:/docker-entrypoint-initdb.d/create-app-role.sh:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d lante_hse"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  hse-service-api:
+    build:
+      context: ../packages/microservices/hse
+      dockerfile: Dockerfile
+    container_name: lante-hse-service
+    ports:
+      - "8088:8080"
+    depends_on:
+      postgres-lante-hse:
+        condition: service_healthy
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Production
+      - ASPNETCORE_URLS=http://+:8080
+      - ConnectionStrings__DefaultConnection=Host=postgres-lante-hse;Port=5432;Database=lante_hse;Username=${DB_USER};Password=${DB_PASSWORD}
+      - ConnectionStrings__AppConnection=Host=postgres-lante-hse;Port=5432;Database=lante_hse;Username=${APP_DB_USER};Password=${APP_DB_PASSWORD}
+      - JWT__SecretKey=${JWT_SECRET}
+      - JWT__Issuer=${JWT_ISSUER}
+      - JWT__Audience=${JWT_AUDIENCE}
+      - TicketingService__BaseUrl=http://ticketing-service-api:8080
+      - InternalServices__ServiceKey=${INTERNAL_SERVICE_KEY}
+    restart: unless-stopped
+
+  # ─── Postgres: Compliance ─────────────────────────────────────────────────────
+  postgres-lante-compliance:
+    image: postgres:15
+    container_name: lante-postgres-compliance
+    ports:
+      - "5441:5432"
+    environment:
+      POSTGRES_DB: lante_compliance
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      QALICORE_APP_PASSWORD: ${APP_DB_PASSWORD}
+    volumes:
+      - lante_compliance_postgres_data:/var/lib/postgresql/data
+      - ./init/create-app-role.sh:/docker-entrypoint-initdb.d/create-app-role.sh:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d lante_compliance"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  compliance-service-api:
+    build:
+      context: ../packages/microservices/compliance
+      dockerfile: Dockerfile
+    container_name: lante-compliance-service
+    ports:
+      - "8089:8080"
+    depends_on:
+      postgres-lante-compliance:
+        condition: service_healthy
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Production
+      - ASPNETCORE_URLS=http://+:8080
+      - ConnectionStrings__DefaultConnection=Host=postgres-lante-compliance;Port=5432;Database=lante_compliance;Username=${DB_USER};Password=${DB_PASSWORD}
+      - ConnectionStrings__AppConnection=Host=postgres-lante-compliance;Port=5432;Database=lante_compliance;Username=${APP_DB_USER};Password=${APP_DB_PASSWORD}
+      - JWT__SecretKey=${JWT_SECRET}
+      - JWT__Issuer=${JWT_ISSUER}
+      - JWT__Audience=${JWT_AUDIENCE}
+      - TicketingService__BaseUrl=http://ticketing-service-api:8080
+      - InternalServices__ServiceKey=${INTERNAL_SERVICE_KEY}
+    restart: unless-stopped
+
+  # ─── Postgres: Subcontracts ────────────────────────────────────────────────────
+  postgres-lante-subcontracts:
+    image: postgres:15
+    container_name: lante-postgres-subcontracts
+    ports:
+      - "5443:5432"
+    environment:
+      POSTGRES_DB: lante_subcontracts
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      QALICORE_APP_PASSWORD: ${APP_DB_PASSWORD}
+    volumes:
+      - lante_subcontracts_postgres_data:/var/lib/postgresql/data
+      - ./init/create-app-role.sh:/docker-entrypoint-initdb.d/create-app-role.sh:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d lante_subcontracts"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  subcontracts-service-api:
+    build:
+      context: ../packages/microservices/subcontracts
+      dockerfile: Dockerfile
+    container_name: lante-subcontracts-service
+    ports:
+      - "8090:8080"
+    depends_on:
+      postgres-lante-subcontracts:
+        condition: service_healthy
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Production
+      - ASPNETCORE_URLS=http://+:8080
+      - ConnectionStrings__DefaultConnection=Host=postgres-lante-subcontracts;Port=5432;Database=lante_subcontracts;Username=${DB_USER};Password=${DB_PASSWORD}
+      - ConnectionStrings__AppConnection=Host=postgres-lante-subcontracts;Port=5432;Database=lante_subcontracts;Username=${APP_DB_USER};Password=${APP_DB_PASSWORD}
+      - JWT__SecretKey=${JWT_SECRET}
+      - JWT__Issuer=${JWT_ISSUER}
+      - JWT__Audience=${JWT_AUDIENCE}
+      - TicketingService__BaseUrl=http://ticketing-service-api:8080
+      - HseService__BaseUrl=http://hse-service-api:8080
+      - InternalServices__ServiceKey=${INTERNAL_SERVICE_KEY}
+    restart: unless-stopped
+
+  # ─── Postgres: Reporting ───────────────────────────────────────────────────────
+  postgres-lante-reporting:
+    image: postgres:15
+    container_name: lante-postgres-reporting
+    ports:
+      - "5445:5432"
+    environment:
+      POSTGRES_DB: lante_reporting
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      QALICORE_APP_PASSWORD: ${APP_DB_PASSWORD}
+    volumes:
+      - lante_reporting_postgres_data:/var/lib/postgresql/data
+      - ./init/create-app-role.sh:/docker-entrypoint-initdb.d/create-app-role.sh:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d lante_reporting"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  reporting-service-api:
+    build:
+      context: ../packages/microservices/reporting
+      dockerfile: Dockerfile
+    container_name: lante-reporting-service
+    ports:
+      - "8091:8080"
+    depends_on:
+      postgres-lante-reporting:
+        condition: service_healthy
+      operations-service-api:
+        condition: service_started
+      fleet-service-api:
+        condition: service_started
+      store-service-api:
+        condition: service_started
+      hse-service-api:
+        condition: service_started
+      compliance-service-api:
+        condition: service_started
+      finance-service-api:
+        condition: service_started
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Production
+      - ASPNETCORE_URLS=http://+:8080
+      - ConnectionStrings__DefaultConnection=Host=postgres-lante-reporting;Port=5432;Database=lante_reporting;Username=${DB_USER};Password=${DB_PASSWORD}
+      - ConnectionStrings__AppConnection=Host=postgres-lante-reporting;Port=5432;Database=lante_reporting;Username=${APP_DB_USER};Password=${APP_DB_PASSWORD}
+      - JWT__SecretKey=${JWT_SECRET}
+      - JWT__Issuer=${JWT_ISSUER}
+      - JWT__Audience=${JWT_AUDIENCE}
+      - JwtSettings__SecretKey=${JWT_SECRET}
+      - JwtSettings__Issuer=${JWT_ISSUER}
+      - JwtSettings__Audience=${JWT_AUDIENCE}
+      - OperationsService__BaseUrl=http://operations-service-api:8080
+      - FleetService__BaseUrl=http://fleet-service-api:8080
+      - StoreService__BaseUrl=http://store-service-api:8080
+      - HseService__BaseUrl=http://hse-service-api:8080
+      - ComplianceService__BaseUrl=http://compliance-service-api:8080
+      - FinanceService__BaseUrl=http://finance-service-api:8080
+      - InternalServices__ServiceKey=${INTERNAL_SERVICE_KEY}
+    restart: unless-stopped
+
+  # ─── API Gateway (the only backend surface a reverse proxy should expose) ─────
+  lante-gateway:
+    build:
+      context: ../packages/LanteGateway/src/LanteGateway
+      dockerfile: Dockerfile
+    container_name: lante-gateway
+    ports:
+      - "5001:5000"
+    depends_on:
+      - user-service-api
+      - license-service-api
+      - ticketing-service-api
+      - fleet-service-api
+      - operations-service-api
+      - crm-service-api
+      - procurement-service-api
+      - hr-service-api
+      - finance-service-api
+      - store-service-api
+      - hse-service-api
+      - compliance-service-api
+      - subcontracts-service-api
+      - reporting-service-api
+    environment:
+      # Development so yarp.Development.json (docker-compose service-name addresses) overrides
+      # the base yarp.json helm-style addresses. Real deploys set this per environment.
+      - ASPNETCORE_ENVIRONMENT=Development
+      # Distinct from k8s's "Production" so this container loads yarp.DockerCompose.json
+      # (compose service hostnames) instead of yarp.json's Kubernetes service hostnames —
+      # a plain "Production" here would risk the k8s image (built from the same source)
+      # also picking up a same-named override file and breaking real routing.
+      - ASPNETCORE_ENVIRONMENT=DockerCompose
+      - ASPNETCORE_URLS=http://+:5000
+      - JWT__SecretKey=${JWT_SECRET}
+      - JWT__Issuer=${JWT_ISSUER}
+      - JWT__Audience=${JWT_AUDIENCE}
+    restart: unless-stopped
+
+volumes:
+  lante_postgres_data:
+  lante_license_postgres_data:
+  lante_ticketing_postgres_data:
+  lante_fleet_postgres_data:
+  lante_ticketing_uploads:
+  lante_operations_postgres_data:
+  lante_operations_uploads:
+  lante_crm_postgres_data:
+  lante_hr_postgres_data:
+  lante_procurement_postgres_data:
+  lante_finance_postgres_data:
+  lante_stores_postgres_data:
+  lante_hse_postgres_data:
+  lante_compliance_postgres_data:
+  lante_subcontracts_postgres_data:
+  lante_reporting_postgres_data:
+
+networks:
+  default:
+    name: lante-network

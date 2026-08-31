@@ -1,0 +1,35 @@
+name: Validate Least-Privilege Runtime Connection
+
+# Guards against a schema-per-tenant service running its request-time queries as the postgres
+# admin/superuser instead of the least-privilege qalicore_app role — see
+# scripts/ci/validate_least_privilege_connection.py for the full rationale (this is the exact bug
+# found in "finance" and "user-service" on 2026-07-22). Runs on any change to a tenant connection
+# interceptor anywhere in the repo, or to the checker/its tests themselves — not scoped to any
+# specific service, so it keeps working unmodified as services are added.
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - "packages/microservices/**/TenantDbConnectionInterceptor.cs"
+      - "packages/microservices/**/*TenantConnectionInterceptor.cs"
+      - "scripts/ci/validate_least_privilege_connection.py"
+      - "scripts/ci/test_validate_least_privilege_connection.py"
+  push:
+    paths:
+      - "packages/microservices/**/TenantDbConnectionInterceptor.cs"
+      - "packages/microservices/**/*TenantConnectionInterceptor.cs"
+      - "scripts/ci/validate_least_privilege_connection.py"
+      - "scripts/ci/test_validate_least_privilege_connection.py"
+
+jobs:
+  check-least-privilege-connection:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run checker's own unit tests
+        run: python3 -m unittest test_validate_least_privilege_connection -v
+        working-directory: scripts/ci
+      - name: Validate actual repo services
+        run: python3 scripts/ci/validate_least_privilege_connection.py

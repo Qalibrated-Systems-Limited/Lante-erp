@@ -1,0 +1,105 @@
+{
+  "_comment": "Overrides cluster destinations for the docker-compose stack, where services are reachable by their compose service name (e.g. user-service-api) rather than the Kubernetes service name baked into yarp.json (e.g. lante-user-service). Loaded only when ASPNETCORE_ENVIRONMENT=DockerCompose (set on the lante-gateway service in Deployment/docker-compose.yml) \u2014 the k8s deployment uses ASPNETCORE_ENVIRONMENT=Production and only ever supplies yarp.json via its ConfigMap, so it never sees this file.",
+  "ReverseProxy": {
+    "Clusters": {
+      "cluster-lante-user-service": {
+        "Destinations": {
+          "cluster-lante-user-service/destination1": {
+            "Address": "http://user-service-api:8080/"
+          }
+        }
+      },
+      "cluster-lante-ticketing-service": {
+        "Destinations": {
+          "cluster-lante-ticketing-service/destination1": {
+            "Address": "http://ticketing-service-api:8080/"
+          }
+        }
+      },
+      "cluster-lante-operation-service": {
+        "Destinations": {
+          "cluster-lante-operation-service/destination1": {
+            "Address": "http://operations-service-api:8080/"
+          }
+        }
+      },
+      "cluster-lante-license-service": {
+        "Destinations": {
+          "cluster-lante-license-service/destination1": {
+            "Address": "http://license-service-api:8080/"
+          }
+        }
+      },
+      "cluster-lante-fleet-service": {
+        "Destinations": {
+          "cluster-lante-fleet-service/destination1": {
+            "Address": "http://fleet-service-api:8080/"
+          }
+        }
+      },
+      "cluster-lante-store-service": {
+        "Destinations": {
+          "cluster-lante-store-service/destination1": {
+            "Address": "http://store-service-api:8080/"
+          }
+        }
+      },
+      "cluster-lante-hse-service": {
+        "Destinations": {
+          "cluster-lante-hse-service/destination1": {
+            "Address": "http://hse-service-api:8080/"
+          }
+        }
+      },
+      "cluster-lante-compliance-service": {
+        "Destinations": {
+          "cluster-lante-compliance-service/destination1": {
+            "Address": "http://compliance-service-api:8080/"
+          }
+        }
+      },
+      "cluster-lante-subcontracts-service": {
+        "Destinations": {
+          "cluster-lante-subcontracts-service/destination1": {
+            "Address": "http://subcontracts-service-api:8080/"
+          }
+        }
+      },
+      "cluster-lante-finance-service": {
+        "Destinations": {
+          "cluster-lante-finance-service/destination1": {
+            "Address": "http://finance-service-api:8080/"
+          }
+        }
+      },
+      "cluster-lante-reporting-service": {
+        "Destinations": {
+          "cluster-lante-reporting-service/destination1": {
+            "Address": "http://reporting-service-api:8080/"
+          }
+        }
+      },
+      "cluster-lante-hr-service": {
+        "Destinations": {
+          "cluster-lante-hr-service/destination1": {
+            "Address": "http://hr-service-api:8080/"
+          }
+        }
+      },
+      "cluster-lante-procurement-service": {
+        "Destinations": {
+          "cluster-lante-procurement-service/destination1": {
+            "Address": "http://procurement-service-api:8080/"
+          }
+        }
+      },
+      "cluster-lante-crm-service": {
+        "Destinations": {
+          "cluster-lante-crm-service/destination1": {
+            "Address": "http://crm-service-api:8080/"
+          }
+        }
+      }
+    }
+  }
+}

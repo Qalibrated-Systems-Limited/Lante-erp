@@ -1,0 +1,21 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: lante-jaeger-collector
+  namespace: {{ .Values.namespace }}
+  labels:
+    app.kubernetes.io/name: lante-jaeger-collector
+    app.kubernetes.io/part-of: lante-erp
+spec:
+  selector:
+    app.kubernetes.io/name: lante-jaeger-collector
+  ports:
+    - name: ui
+      port: 16686
+      targetPort: ui
+    - name: otlp-grpc
+      port: 4317
+      targetPort: otlp-grpc
+    - name: otlp-http
+      port: 4318
+      targetPort: otlp-http

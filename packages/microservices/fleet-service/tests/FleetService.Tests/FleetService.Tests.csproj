@@ -1,0 +1,36 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <IsPackable>false</IsPackable>
+    <IsTestProject>true</IsTestProject>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\FleetService.Core\FleetService.Core.csproj" />
+    <ProjectReference Include="..\..\src\FleetService.Infrastructure\FleetService.Infrastructure.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.8.0" />
+    <PackageReference Include="xunit" Version="2.6.3" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="2.5.5">
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+      <PrivateAssets>all</PrivateAssets>
+    </PackageReference>
+    <PackageReference Include="FluentAssertions" Version="6.12.0" />
+    <!-- Without this, NuGet floors Microsoft.EntityFrameworkCore.Relational at whatever
+         Npgsql.EntityFrameworkCore.PostgreSQL's floor is (9.0.1) rather than the 9.0.6 that
+         FleetService.Infrastructure actually ships, because Microsoft.EntityFrameworkCore.Design
+         is PrivateAssets="all" in Infrastructure and so doesn't flow across the ProjectReference.
+         Same shape as #238 (FinanceService.Tests) and #242. -->
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Relational" Version="9.0.6" />
+    <!-- For FleetAuditTests: the interceptor adds entities during SavingChanges, and whether those
+         additions are written in the same save is a property of the real save pipeline, not of an
+         in-memory dictionary. Same reasoning as FinanceService.Tests. -->
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="9.0.6" />
+  </ItemGroup>
+
+</Project>

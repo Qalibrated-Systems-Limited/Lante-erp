@@ -1,0 +1,29 @@
+# ============================================================================
+# Staging overlay — layered on top of values.yaml (later file wins in a Helm
+# valueFiles list). Same image tags/resources as production; only what has to
+# differ for a second environment on the SAME single-node cluster changes here.
+# ============================================================================
+global:
+  environment: staging
+  namespace: new-erp-staging
+
+# No public ingress yet — this is the cheap first step from #221 (a namespace +
+# a manual production gate). Exposing staging externally needs its own DNS
+# hostname/TLS cert and is a deliberate follow-up, not bundled in here. Reach
+# staging via kubectl port-forward for now.
+ingress:
+  enabled: false
+
+# Staging gets its own Postgres instance (own PVC, same shared-server-per-
+# namespace pattern as production) so a bad staging write can never touch real
+# tenant data — sharing production's database would defeat the point of having
+# a staging environment at all. This does mean a second Postgres pod's worth of
+# disk/CPU on the same node; that's the deliberate cost of real isolation.
+
+# Backups are production-only: staging data isn't retention-worthy, and running
+# the same pgBackRest/Velero jobs a second time against a throwaway namespace
+# would duplicate cron load and MinIO storage for no benefit.
+backups:
+  enabled: false
+  k3sSqlite:
+    enabled: false

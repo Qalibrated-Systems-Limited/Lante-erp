@@ -1,0 +1,53 @@
+# Bootstrap file — like lante-erp-application.yaml, this is applied manually ONCE
+# (`kubectl apply -f kubernetes/argocd/lante-erp-staging-application.yaml`) to register the
+# Application with ArgoCD. After that, ArgoCD reconciles it continuously like any other
+# Application; this file only matters again if the Application object itself is ever
+# recreated from scratch.
+#
+# Staging tracks `main` exactly like production and stays on automated sync — it is meant to
+# show what's about to ship, not to be a second manually-gated environment. See #221: the
+# actual human gate is on the PRODUCTION Application (lante-erp-application.yaml), which no
+# longer auto-syncs.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: lante-erp-staging
+  namespace: argocd
+  labels:
+    app.kubernetes.io/name: lante-erp-staging
+    app.kubernetes.io/part-of: lante-erp
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/LANTE-AFRICA/Lante-erp.git
+    targetRevision: main
+    path: kubernetes/helm-charts/lante-erp-platform
+    helm:
+      valueFiles:
+        - values.yaml
+        - values-staging.yaml
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: new-erp-staging
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - PrunePropagationPolicy=foreground
+      - PruneLast=true
+      - RespectIgnoreDifferences=true
+    retry:
+      limit: 5
+      backoff:
+        duration: 5s
+        factor: 2
+        maxDuration: 3m
+  ignoreDifferences:
+    - group: apps
+      kind: Deployment
+      jsonPointers:
+        - /spec/replicas

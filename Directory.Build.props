@@ -1,0 +1,41 @@
+<Project>
+  <!-- Applies to every .csproj under the repo (MSBuild walks up from each project looking for
+       this file). Warnings are compile errors from here on — every warning that existed when
+       this was introduced was individually fixed or, where a real fix wasn't possible (see the
+       AutoMapper NuGetAuditSuppress entries), narrowly and explicitly suppressed with a reason.
+       No blanket NoWarn list: a new warning should fail the build, not join a suppression list.
+
+       SCOPE, stated because it is not obvious and was found to be false once already (#241):
+       this gate covers local and CI `dotnet build`/`dotnet test` runs from the repo root ONLY.
+       It does NOT reach the builds that actually ship — every `build-*-service.yml` sets its
+       Docker build `context:` to that service's own directory (e.g.
+       `packages/microservices/ticketing`), and MSBuild discovers Directory.Build.props by
+       walking UP from each project; inside the container the tree starts at /src, so this file
+       was never in the build context to begin with and is silently absent for the compile that
+       produces the shipped DLL. A warning gated here can be red locally and in CI while the
+       container that deploys it builds clean — and the reverse: a promoted-to-error warning
+       here can differ in severity from what the image build sees (this is part of why #233's
+       SDK-band NU1903/NuGetAuditSuppress problem stayed invisible so long — the container never
+       had to honour the suppression because it never promoted the warning in the first place).
+       Deliberately not fixed by duplicating this file per service or by widening every build
+       context — both were considered and rejected: the former re-creates the exact "N copies
+       drift" class of bug #198 exists to prevent, the latter is real but nontrivial rework
+       across 16 workflows/Dockerfiles that deserves its own pass with CI available to verify
+       it, not a change made blind. The #214 test workflows are the real gate on what ships;
+       treat this file as a *local/CI developer signal*, not a guarantee about the image. -->
+  <PropertyGroup>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <!-- TreatWarningsAsErrors only promotes compiler warnings — MSBuild's own warnings, including
+         MSB3277 ("found conflicts between different versions of X that could not be resolved"),
+         slip through it entirely. MSB3277 means a project's tests (or its shipped build) may bind
+         against a DIFFERENT assembly version than the one actually referenced elsewhere in the
+         graph — see #242, where FleetService.Tests, LicenseService.Tests and UserService.Tests
+         were each silently running against the wrong Microsoft.EntityFrameworkCore.Relational or
+         System.Text.Json build. A targeted list, not the blanket MSBuildTreatWarningsAsErrors, so a
+         *new* MSBuild warning shows up as a warning to be looked at rather than an immediate wall —
+         same reasoning as the no-blanket-NoWarn policy above. Every MSB3277 that existed when this landed was
+         fixed (pinned the trailing package reference to the version actually shipped), not
+         suppressed. -->
+    <MSBuildWarningsAsErrors>MSB3277</MSBuildWarningsAsErrors>
+  </PropertyGroup>
+</Project>

@@ -1,0 +1,77 @@
+{{- if .Values.backups.enabled }}
+# Scheduled full/differential physical backup — the counterpart to the continuous WAL-push
+# configured directly on the postgresql.primary pod (values.yaml, `extendedConfiguration` +
+# `extraEnvVars`). Runs pgbackrest via `kubectl exec` INSIDE the live lante-postgresql-0 pod,
+# rather than from a separate pod connecting over the network — pgBackRest's `pg1-host` option
+# is for its own SSH/TLS remote-repository protocol, not a plain PostgreSQL TCP+password
+# connection, so a separate pod genuinely cannot drive a remote Postgres host this way. Running
+# via exec reuses the exact pgbackrest config (S3 credentials, stanza, pg1-path) already present
+# on that pod's own environment — nothing to duplicate or keep in sync here.
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: lante-backup-pgbackrest
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    {{- include "lante-erp-platform.labels" . | nindent 4 }}
+    app.kubernetes.io/name: lante-backup-pgbackrest
+spec:
+  schedule: {{ .Values.backups.pgbackrest.schedule | quote }}
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      ttlSecondsAfterFinished: 3600
+      template:
+        metadata:
+          labels:
+            app.kubernetes.io/name: lante-backup-pgbackrest
+        spec:
+          restartPolicy: OnFailure
+          serviceAccountName: lante-backup
+          containers:
+            - name: pgbackrest-exec
+              image: docker.io/bitnami/kubectl:latest
+              env:
+                - name: FULL_BACKUP_DAY_OF_WEEK
+                  value: {{ .Values.backups.pgbackrest.fullBackupDayOfWeek | quote }}
+                # stanza-create/backup need a real DB connection (unlike archive-push, which
+                # only copies WAL files and never talks SQL) — confirmed live that pg_hba.conf
+                # requires scram-sha-256 even on the local socket, so this can't be trust/peer
+                # auth. `info` alone doesn't need this, and stays unauthenticated below.
+                - name: DB_PASSWORD
+                  valueFrom:
+                    secretKeyRef: { name: lante-erp-secrets, key: DB_PASSWORD }
+              command:
+                - /bin/bash
+                - -ec
+                - |
+                  EXEC="kubectl exec -n {{ .Values.global.namespace }} lante-postgresql-0 -c postgresql --"
+                  PGBR="env PGPASSWORD=$DB_PASSWORD pgbackrest --pg1-user=postgres --stanza=lante"
+
+                  # If the MinIO credentials secret doesn't exist yet (separate ArgoCD
+                  # Application, may not be bootstrapped), the live pod's PGBACKREST_REPO1_S3_KEY
+                  # env var will simply be unset — check for that before attempting anything, same
+                  # "expected for now, not a failure" posture as the other backup jobs.
+                  if ! $EXEC printenv PGBACKREST_REPO1_S3_KEY >/dev/null 2>&1; then
+                    echo "No MinIO/S3 credentials configured on the Postgres pod yet — skipping physical backup entirely. WAL archiving is independently queuing in pg_wal regardless; this job just has nowhere to push a base backup yet. This is expected for now, not a failure."
+                    exit 0
+                  fi
+
+                  echo "Ensuring stanza exists (idempotent)..."
+                  $EXEC $PGBR stanza-create || true
+
+                  TYPE="diff"
+                  if [ "$(date -u +%u)" = "$FULL_BACKUP_DAY_OF_WEEK" ]; then
+                    TYPE="full"
+                  fi
+                  echo "Running ${TYPE} backup..."
+                  $EXEC $PGBR --type="${TYPE}" backup
+
+                  echo "Backup complete. Current repo info:"
+                  $EXEC pgbackrest --stanza=lante info
+              resources:
+                requests: { cpu: 50m, memory: 64Mi }
+                limits: { cpu: 250m, memory: 256Mi }
+{{- end }}

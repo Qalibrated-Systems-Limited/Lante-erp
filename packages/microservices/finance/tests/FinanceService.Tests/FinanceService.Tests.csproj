@@ -1,0 +1,38 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <IsPackable>false</IsPackable>
+    <IsTestProject>true</IsTestProject>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\FinanceService.Core\FinanceService.Core.csproj" />
+    <ProjectReference Include="..\..\src\FinanceService.Infrastructure\FinanceService.Infrastructure.csproj" />
+    <!-- Api, for the permission handler. Finance had no authorization at all (#277); the handler is
+         the thing that now decides, so it is the thing that has to be tested. -->
+    <ProjectReference Include="..\..\src\FinanceService.Api\FinanceService.Api.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.8.0" />
+    <PackageReference Include="xunit" Version="2.6.3" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="2.5.5">
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+      <PrivateAssets>all</PrivateAssets>
+    </PackageReference>
+    <PackageReference Include="Microsoft.EntityFrameworkCore.InMemory" Version="9.0.6" />
+    <!-- SQLite for the audit-interceptor tests: the interceptor adds entities during SavingChanges, and
+         whether those additions are actually written in the same save is a property of the real save
+         pipeline rather than of an in-memory dictionary. Version matched to the EF above. -->
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="9.0.6" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Relational" Version="9.0.6" />
+    <!-- A real Postgres for the paths the other providers cannot express: pg_advisory_xact_lock,
+         transactions and ExecuteUpdateAsync. Version matched to what the services use. -->
+    <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="9.0.4" />
+    <PackageReference Include="FluentAssertions" Version="6.12.0" />
+  </ItemGroup>
+
+</Project>

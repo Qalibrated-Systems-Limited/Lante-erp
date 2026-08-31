@@ -1,0 +1,67 @@
+version: "3.9"
+
+services:
+  postgres-lante-user:
+    image: postgres:15
+    ports:
+      - "5435:5432"
+    environment:
+      POSTGRES_DB: lante_userservice
+      POSTGRES_USER: lante_user
+      POSTGRES_PASSWORD: lante_pass
+    volumes:
+      - lante_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U lante_user -d lante_userservice"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  redis-lante:
+    image: redis:7
+    ports:
+      - "6380:6379"
+    command: redis-server --requirepass lante_redis123
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "lante_redis123", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  user-service-api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8081:8080"
+    depends_on:
+      postgres-lante-user:
+        condition: service_healthy
+      redis-lante:
+        condition: service_healthy
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Production
+      - ASPNETCORE_URLS=http://+:8080
+      - ConnectionStrings__DefaultConnection=Host=postgres-lante-user;Port=5432;Database=lante_userservice;Username=lante_user;Password=lante_pass
+      - ConnectionStrings__Redis=redis-lante:6379,password=lante_redis123
+      - UseRedis=true
+      - JwtSettings__SecretKey=lante-jwt-super-secret-key-minimum-32-chars
+      - JwtSettings__Issuer=LanteUserService
+      - JwtSettings__Audience=LanteUserService
+      - JWT__SecretKey=lante-jwt-super-secret-key-minimum-32-chars
+      - JWT__Issuer=LanteUserService
+      - JWT__Audience=LanteUserService
+      - JWT__TokenExpiryMinutes=480
+      - Email__SmtpUsername=melanie.akinyi378@gmail.com
+      - Email__FromEmail=melanie.akinyi378@gmail.com
+      - Email__SmtpPassword=${EMAIL_SMTP_PASSWORD}
+    restart: unless-stopped
+
+volumes:
+  lante_postgres_data:
+
+networks:
+  default:
+    name: lante-user-service-network

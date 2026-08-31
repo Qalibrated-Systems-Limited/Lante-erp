@@ -1,0 +1,115 @@
+{{- if .Values.backups.enabled }}
+# Weekly restore verification — a backup nobody has ever restored is a belief, not a backup.
+# Restores the latest local dump into a throwaway scratch Postgres (never the same PVC, never
+# persisted) and hard-fails if the restored counts don't match what was recorded from the LIVE
+# source at dump time. Reads straight off the same local lante-backup-storage PVC the dump job
+# writes to — works identically whether or not B2 offsite storage exists yet, since the thing
+# actually being proven here is "does the dump restore and match", not "did the upload work".
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: lante-backup-verify
+  namespace: {{ .Values.global.namespace }}
+  labels:
+    {{- include "lante-erp-platform.labels" . | nindent 4 }}
+    app.kubernetes.io/name: lante-backup-verify
+spec:
+  schedule: {{ .Values.backups.verify.schedule | quote }}
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      ttlSecondsAfterFinished: 3600
+      template:
+        metadata:
+          labels:
+            app.kubernetes.io/name: lante-backup-verify
+        spec:
+          restartPolicy: OnFailure
+          serviceAccountName: lante-backup
+          volumes:
+            - name: dumps
+              persistentVolumeClaim:
+                claimName: lante-backup-storage
+                readOnly: true
+            # Scratch Postgres data dir — emptyDir, thrown away with the pod. Never the real PVC.
+            - name: scratch-data
+              emptyDir: {}
+          initContainers:
+            # Native sidecar (restartPolicy: Always, stable since k8s 1.29) — starts alongside
+            # the other init containers and keeps running through the main container's lifetime,
+            # then is torn down automatically once the main container exits. This is a throwaway
+            # instance: a fixed local password is fine, nothing about it is sensitive or reused.
+            - name: scratch-postgres
+              restartPolicy: Always
+              image: docker.io/bitnami/postgresql:latest
+              env:
+                - name: POSTGRESQL_PASSWORD
+                  value: "scratch-verify-only"
+                - name: POSTGRESQL_PGDATA
+                  value: /scratch-data/pgdata
+              volumeMounts:
+                - name: scratch-data
+                  mountPath: /scratch-data
+              startupProbe:
+                exec:
+                  command: ["pg_isready", "-U", "postgres"]
+                periodSeconds: 2
+                failureThreshold: 60
+              resources:
+                requests: { cpu: 100m, memory: 256Mi }
+                limits: { cpu: 1000m, memory: 1Gi }
+          containers:
+            - name: verify
+              image: docker.io/bitnami/postgresql:latest
+              env:
+                - name: PGPASSWORD
+                  value: "scratch-verify-only"
+              volumeMounts:
+                - name: dumps
+                  mountPath: /dumps
+                  readOnly: true
+              command:
+                - /bin/bash
+                - -ec
+                - |
+                  DATE="$(cat /dumps/latest.txt)"
+                  SRC="/dumps/${DATE}"
+                  echo "Verifying backup from ${DATE} (${SRC}) against scratch instance..."
+
+                  echo "Checking checksums..."
+                  (cd "$SRC" && sha256sum -c checksums.txt)
+
+                  FAILED=0
+                  for manifest in "$SRC"/*.manifest.json; do
+                    db="$(basename "$manifest" .manifest.json)"
+                    expected_schema_count="$(grep -o '"tenant_schema_count":[0-9]*' "$manifest" | grep -o '[0-9]*$')"
+                    expected_table_count="$(grep -o '"table_count":[0-9]*' "$manifest" | grep -o '[0-9]*$')"
+
+                    echo "Restoring ${db} (expecting tenant_schema_count=${expected_schema_count}, table_count=${expected_table_count})..."
+                    createdb -h 127.0.0.1 -U postgres "$db"
+                    pg_restore -h 127.0.0.1 -U postgres -d "$db" "$SRC/${db}.dump" || true
+
+                    actual_schema_count="$(psql -h 127.0.0.1 -U postgres -d "$db" -Atc \
+                      "SELECT count(*) FROM information_schema.schemata WHERE schema_name LIKE 'tenant_%'")"
+                    actual_table_count="$(psql -h 127.0.0.1 -U postgres -d "$db" -Atc \
+                      "SELECT count(*) FROM information_schema.tables WHERE table_schema LIKE 'tenant_%' OR table_schema = 'public'")"
+
+                    if [ "$actual_schema_count" != "$expected_schema_count" ] || [ "$actual_table_count" != "$expected_table_count" ]; then
+                      echo "::error:: ${db}: restored tenant_schema_count=${actual_schema_count} (expected ${expected_schema_count}), table_count=${actual_table_count} (expected ${expected_table_count})"
+                      FAILED=1
+                    else
+                      echo "${db}: OK (tenant_schema_count=${actual_schema_count}, table_count=${actual_table_count})"
+                    fi
+                  done
+
+                  if [ "$FAILED" -ne 0 ]; then
+                    echo "::error:: Backup verification FAILED for one or more databases — see above."
+                    exit 1
+                  fi
+                  echo "All databases verified successfully against ${DATE}'s dump."
+              resources:
+                requests: { cpu: 250m, memory: 512Mi }
+                limits: { cpu: 1000m, memory: 2Gi }
+{{- end }}

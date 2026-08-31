@@ -1,0 +1,64 @@
+name: Validate Permission Seeder Coverage
+
+# #282: operations.read.dept and operations.read.all were enforced in three operations-service
+# controllers since that service existed, but never seeded in DatabaseSeeder.cs — so no role could
+# ever hold them, and a whole frontend page (Negligence) was unreachable by anyone but a
+# system.admin. The code that checked the permission read correctly; the seed row that would let a
+# role ever hold it was simply never added, and nothing caught that.
+#
+# This checks every HasClaim("permission", "x") / [Authorize(Policy = "x")] literal in
+# packages/microservices against DatabaseSeeder.cs's seeded permission list. Pre-existing gaps
+# (#290) are baselined in KNOWN_MISSING; only a NEW gap, or a baselined one that quietly became
+# seeded without the baseline being updated, fails the build.
+#
+# Deliberately NO `if: github.repository ==` guard — a skipped job reports SUCCESS, so once this is
+# a required check a skipped one would still satisfy branch protection (#198).
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - "packages/microservices/**/*.cs"
+      - "scripts/ci/validate_permission_seeder_coverage.py"
+      - ".github/workflows/validate-permission-seeder-coverage.yml"
+  push:
+      # No branch filter, deliberately. CI now runs on the FORK — the base repo's Actions fail every
+      # run in about a second, which is exhausted minutes rather than a broken build. On the fork a
+      # feature branch produces only a `push` event (the PR is opened against the base repo, so no
+      # `pull_request` event fires here), and with `branches: [main]` that meant a feature branch
+      # triggered almost nothing. Merging unverified again is exactly what #253 was about, in a new
+      # costume. Checks, not builds: the build-and-deploy workflows keep their main-only filter, because
+      # a feature branch must never push an image or deploy.
+    paths:
+      - "packages/microservices/**/*.cs"
+      - "scripts/ci/validate_permission_seeder_coverage.py"
+      - ".github/workflows/validate-permission-seeder-coverage.yml"
+
+jobs:
+  seeder-coverage:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Run script's own unit tests
+        run: python3 -m unittest test_validate_permission_seeder_coverage -v
+        working-directory: scripts/ci
+
+      - name: Check every referenced permission is seeded
+        run: python3 scripts/ci/validate_permission_seeder_coverage.py
+
+      - name: Summary
+        if: always()
+        run: |
+          {
+            echo "### Permission seeder coverage"
+            echo ""
+            echo "Every permission referenced in a \`HasClaim\`/\`[Authorize(Policy=...)]\` must be"
+            echo "seeded in \`DatabaseSeeder.cs\`, or no role could ever hold it (#282). Pre-existing"
+            echo "gaps are baselined in \`KNOWN_MISSING\` and tracked in #290; the baseline can only"
+            echo "shrink, because an entry that stops being missing fails the check."
+          } >> "$GITHUB_STEP_SUMMARY"

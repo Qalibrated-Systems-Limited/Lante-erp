@@ -1,0 +1,131 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "reporting-service.fullname" . }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "reporting-service.labels" . | nindent 4 }}
+spec:
+  {{- if not .Values.autoscaling.enabled }}
+  replicas: {{ .Values.replicaCount }}
+  {{- end }}
+  selector:
+    matchLabels:
+      {{- include "reporting-service.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "8080"
+        prometheus.io/path: "/metrics"
+        {{- with .Values.podAnnotations }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+      labels:
+        {{- include "reporting-service.selectorLabels" . | nindent 8 }}
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      serviceAccountName: {{ include "reporting-service.serviceAccountName" . }}
+      containers:
+      - name: reporting-service
+        image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+        imagePullPolicy: {{ .Values.image.pullPolicy }}
+        ports:
+        - name: http
+          containerPort: {{ .Values.service.targetPort }}
+          protocol: TCP
+        startupProbe:
+          httpGet:
+            path: /health
+            port: http
+          failureThreshold: 30
+          periodSeconds: 10
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: http
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: http
+          initialDelaySeconds: 10
+          periodSeconds: 5
+          timeoutSeconds: 3
+          failureThreshold: 3
+        resources:
+          {{- toYaml .Values.resources | nindent 12 }}
+        env:
+          - name: ASPNETCORE_ENVIRONMENT
+            value: "Production"
+          - name: ASPNETCORE_URLS
+            value: "http://+:8080"
+          - name: JWT__Issuer
+            value: "LanteUserService"
+          - name: JWT__Audience
+            value: "LanteUserService"
+          - name: JWT__JwksUrl
+            value: "http://lante-user-service:8080/.well-known/jwks.json"
+          - name: JwtSettings__Issuer
+            value: "LanteUserService"
+          - name: JwtSettings__Audience
+            value: "LanteUserService"
+          # Reporting-service pulls report source data from these upstream services over their
+          # internal ClusterIP DNS names (its own persistence is the ReportDefinition/
+          # ReportSchedule/ReportRecipient/ReportRun tables below, not this data).
+          - name: OperationsService__BaseUrl
+            value: "http://lante-operation-service:8080"
+          - name: FleetService__BaseUrl
+            value: "http://lante-fleet-service:8080"
+          - name: StoreService__BaseUrl
+            value: "http://lante-store-service:8080"
+          - name: HseService__BaseUrl
+            value: "http://lante-hse-service:8080"
+          - name: ComplianceService__BaseUrl
+            value: "http://lante-compliance-service:8080"
+          - name: FinanceService__BaseUrl
+            value: "http://lante-finance-service:8080"
+          - name: TicketingService__BaseUrl
+            value: "http://lante-ticketing-service:8080"
+          # Reports #12 and #13 (#225). Without this the HrServiceClient resolves no BaseUrl and both
+          # reports fail at RUNTIME rather than at deploy. Host verified against the other charts rather
+          # than assumed. This is the only kubernetes/ file this branch touches, and it is required for
+          # the feature to work at all.
+          - name: HrService__BaseUrl
+            value: "http://lante-hr-service:8080"
+          - name: ConnectionStrings__DefaultConnection
+            valueFrom:
+              secretKeyRef:
+                name: lante-erp-secrets
+                key: REPORTING_DB_CONNECTION
+          - name: ConnectionStrings__AppConnection
+            valueFrom:
+              secretKeyRef:
+                name: lante-erp-secrets
+                key: REPORTING_APP_CONNECTION
+          - name: InternalServices__ServiceKey
+            valueFrom:
+              secretKeyRef:
+                name: lante-erp-secrets
+                key: INTERNAL_SERVICE_KEY
+          - name: Storage__BasePath
+            value: "/app/uploads"
+          - name: Storage__BaseUrl
+            value: {{ .Values.storage.publicBaseUrl | quote }}
+        volumeMounts:
+          - name: tmp
+            mountPath: /tmp
+          - name: uploads
+            mountPath: /app/uploads
+      volumes:
+        - name: tmp
+          emptyDir: {}
+        - name: uploads
+          persistentVolumeClaim:
+            claimName: {{ include "reporting-service.fullname" . }}-uploads

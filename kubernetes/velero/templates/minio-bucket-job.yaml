@@ -1,0 +1,43 @@
+{{/*
+Creates the Velero bucket on the MinIO instance above. Runs as an ArgoCD PostSync hook — after
+the Deployment/Service/PVC are applied — and is deleted+recreated on every successful sync
+(hook-delete-policy: HookSucceeded) since Job specs are immutable and this needs to be safe to
+re-run. `mc mb --ignore-existing` makes actual bucket creation idempotent underneath that.
+*/}}
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: lante-backup-minio-create-bucket
+  namespace: {{ .Values.namespace }}
+  labels:
+    app.kubernetes.io/name: lante-backup-minio
+    app.kubernetes.io/part-of: lante-erp
+  annotations:
+    argocd.argoproj.io/hook: PostSync
+    argocd.argoproj.io/hook-delete-policy: HookSucceeded
+spec:
+  backoffLimit: 6
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: lante-backup-minio
+    spec:
+      restartPolicy: OnFailure
+      containers:
+        - name: create-bucket
+          image: {{ .Values.minio.mcImage | quote }}
+          envFrom:
+            - secretRef:
+                name: lante-backup-minio-credentials
+          command:
+            - /bin/sh
+            - -ec
+            - |
+              until mc alias set --insecure local https://lante-backup-minio:9000 "$MINIO_ROOT_USER" "$MINIO_ROOT_PASSWORD"; do
+                echo "Waiting for MinIO to be ready..."
+                sleep 3
+              done
+              {{- range .Values.minio.bucketNames }}
+              mc mb --insecure --ignore-existing "local/{{ . }}"
+              echo "Bucket {{ . }} ready."
+              {{- end }}

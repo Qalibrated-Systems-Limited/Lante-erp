@@ -1,0 +1,97 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "license-service.fullname" . }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "license-service.labels" . | nindent 4 }}
+spec:
+  {{- if not .Values.autoscaling.enabled }}
+  replicas: {{ .Values.replicaCount }}
+  {{- end }}
+  selector:
+    matchLabels:
+      {{- include "license-service.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "8080"
+        prometheus.io/path: "/metrics"
+      labels:
+        {{- include "license-service.selectorLabels" . | nindent 8 }}
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      serviceAccountName: {{ include "license-service.serviceAccountName" . }}
+      containers:
+      - name: license-service
+        image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+        imagePullPolicy: {{ .Values.image.pullPolicy }}
+        ports:
+        - name: http
+          containerPort: {{ .Values.service.targetPort }}
+          protocol: TCP
+        startupProbe:
+          httpGet:
+            path: /health
+            port: http
+          failureThreshold: 30
+          periodSeconds: 10
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: http
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: http
+          initialDelaySeconds: 10
+          periodSeconds: 5
+          timeoutSeconds: 3
+          failureThreshold: 3
+        resources:
+          {{- toYaml .Values.resources | nindent 12 }}
+        env:
+          - name: ASPNETCORE_ENVIRONMENT
+            value: "Production"
+          - name: ASPNETCORE_URLS
+            value: "http://+:8080"
+          - name: JwtSettings__Issuer
+            value: "LanteUserService"
+          - name: JwtSettings__Audience
+            value: "LanteUserService"
+          - name: ConnectionStrings__DefaultConnection
+            valueFrom:
+              secretKeyRef:
+                name: lante-erp-secrets
+                key: LICENSE_DB_CONNECTION
+          - name: ConnectionStrings__AppConnection
+            valueFrom:
+              secretKeyRef:
+                name: lante-erp-secrets
+                key: LICENSE_APP_CONNECTION
+          - name: License__PrivateKeyJwk
+            valueFrom:
+              secretKeyRef:
+                name: lante-erp-secrets
+                key: LICENSE_PRIVATE_KEY_JWK
+          - name: InternalServices__ServiceKey
+            valueFrom:
+              secretKeyRef:
+                name: lante-erp-secrets
+                key: INTERNAL_SERVICE_KEY
+          - name: TicketingService__BaseUrl
+            value: "http://lante-ticketing-service:8080"
+        volumeMounts:
+          - name: tmp
+            mountPath: /tmp
+      volumes:
+        - name: tmp
+          emptyDir: {}

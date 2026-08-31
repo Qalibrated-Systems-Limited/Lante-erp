@@ -1,0 +1,61 @@
+name: Validate Dockerignore Coverage
+
+# Every image build context must carry a .dockerignore, and the .NET ones must stay identical.
+#
+# .dockerignore is resolved against the BUILD CONTEXT, not the repo root. Every build-*.yml sets
+# `context:` to a service directory, so a single file at the repo root has NO effect — verified by
+# building with one there and watching obj/ arrive in the image anyway. Hence sixteen copies, and hence
+# this check: duplication that nothing verifies is the drift failure #198 exists for.
+#
+# Measured before/after on ticketing: 106 MB of context down to 3.39 MB, confirmed by Docker's own
+# "transferring context" line. Beyond the wasted upload, a stale artifact left in bin/ can be copied into
+# the image ahead of the fresh compile meant to replace it. See #241.
+#
+# Deliberately NO `if: github.repository ==` guard — a skipped job reports SUCCESS, so once this is a
+# required check a skipped one would still satisfy branch protection. Same reasoning as test-dotnet.yml.
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - "**/.dockerignore"
+      - "**/Dockerfile"
+      - ".github/workflows/build-*.yml"
+      - "scripts/ci/validate_dockerignore.py"
+      - "scripts/ci/test_validate_dockerignore.py"
+      - ".github/workflows/validate-dockerignore.yml"
+  push:
+      # No branch filter, deliberately. CI now runs on the FORK — the base repo's Actions fail every
+      # run in about a second, which is exhausted minutes rather than a broken build. On the fork a
+      # feature branch produces only a `push` event (the PR is opened against the base repo, so no
+      # `pull_request` event fires here), and with `branches: [main]` that meant a feature branch
+      # triggered almost nothing. Merging unverified again is exactly what #253 was about, in a new
+      # costume. Checks, not builds: the build-and-deploy workflows keep their main-only filter, because
+      # a feature branch must never push an image or deploy.
+    paths:
+      - "**/.dockerignore"
+      - "**/Dockerfile"
+      - ".github/workflows/build-*.yml"
+      - "scripts/ci/validate_dockerignore.py"
+      - "scripts/ci/test_validate_dockerignore.py"
+      - ".github/workflows/validate-dockerignore.yml"
+
+jobs:
+  dockerignore:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Run script's own unit tests
+        # Before trusting what it says about the repo. One of its tests asserts that discovering ZERO
+        # contexts is a hard failure — otherwise a renamed `context:` key would make this pass while
+        # covering nothing.
+        run: python3 -m unittest test_validate_dockerignore -v
+        working-directory: scripts/ci
+
+      - name: Check every build context has a .dockerignore
+        run: python3 scripts/ci/validate_dockerignore.py

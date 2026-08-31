@@ -1,0 +1,96 @@
+name: Validate Permission Hierarchy
+
+# The permission hierarchy — which permissions imply which — is hand-copied into every service's
+# PermissionAuthorizationHandler.cs and again into apps/lante_frontend/src/utils/permissions.js.
+# Nothing kept those copies honest and they drifted: #204 (backend vs backend) and #271 (frontend vs
+# backend, 12 permissions across 9 services).
+#
+# Drift here is not cosmetic. A UI that grants more than the API does teaches users a permission
+# works and then fails them at the call; a UI that grants less hides features people are entitled
+# to. The licensing case in #271 is the sharp end: the backend deliberately exempts licensing.* from
+# the system.admin bypass because system.admin means "admin within your own tenant" and licensing is
+# platform-wide, while the frontend short-circuits on system.admin unconditionally.
+#
+# Two modes. One compares the frontend hierarchy against the owning backend copy. The other checks
+# that every permission a service ENFORCES actually exists in the seeder — a permission that is never
+# seeded is never a row, never attaches to a role and never reaches a JWT, so the check reading it can
+# never pass. That found 22 of them, including all of hr.*, crm.* and procurement.*, leaving three
+# modules reachable only by system.admin (#293). Comparing hierarchies to each other cannot find that:
+# both copies agreed, and both described permissions nobody could hold.
+#
+# Runs when a permission definition, a controller policy, or the seeder changes. That is the moment the check is worth having, and
+# scoping it here means pre-existing drift does not red-flag unrelated work.
+#
+# Deliberately NO `if: github.repository ==` guard — a skipped job reports SUCCESS, so once this is a
+# required check a skipped one would still satisfy branch protection. Same reasoning as
+# test-dotnet.yml, and the same failure #198 exists for.
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - "apps/lante_frontend/src/utils/permissions.js"
+      - "packages/microservices/**/PermissionAuthorizationHandler.cs"
+      # A controller adding [Authorize(Policy = "…")] is exactly when the seeded-vs-enforced mode has
+      # to fire, and the seeder is the other half of that comparison. Without these two the check
+      # would only run when a hierarchy changed — and #293 was 22 permissions enforced by controllers
+      # that no hierarchy change would have touched.
+      - "packages/microservices/**/Controllers/*.cs"
+      - "packages/microservices/masterdata/user-service/src/UserService.Infrastructure/Data/DatabaseSeeder.cs"
+      - "scripts/ci/validate_permission_hierarchy.py"
+      - "scripts/ci/test_validate_permission_hierarchy.py"
+      - ".github/workflows/validate-permission-hierarchy.yml"
+  push:
+      # No branch filter, deliberately. CI now runs on the FORK — the base repo's Actions fail every
+      # run in about a second, which is exhausted minutes rather than a broken build. On the fork a
+      # feature branch produces only a `push` event (the PR is opened against the base repo, so no
+      # `pull_request` event fires here), and with `branches: [main]` that meant a feature branch
+      # triggered almost nothing. Merging unverified again is exactly what #253 was about, in a new
+      # costume. Checks, not builds: the build-and-deploy workflows keep their main-only filter, because
+      # a feature branch must never push an image or deploy.
+    paths:
+      - "apps/lante_frontend/src/utils/permissions.js"
+      - "packages/microservices/**/PermissionAuthorizationHandler.cs"
+      # A controller adding [Authorize(Policy = "…")] is exactly when the seeded-vs-enforced mode has
+      # to fire, and the seeder is the other half of that comparison. Without these two the check
+      # would only run when a hierarchy changed — and #293 was 22 permissions enforced by controllers
+      # that no hierarchy change would have touched.
+      - "packages/microservices/**/Controllers/*.cs"
+      - "packages/microservices/masterdata/user-service/src/UserService.Infrastructure/Data/DatabaseSeeder.cs"
+      - "scripts/ci/validate_permission_hierarchy.py"
+      - "scripts/ci/test_validate_permission_hierarchy.py"
+      - ".github/workflows/validate-permission-hierarchy.yml"
+
+jobs:
+  hierarchy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Run script's own unit tests
+        # Same order as the other validators here: prove the checker works before trusting what it
+        # says about the repo. Three of its twelve tests cover failure modes it silently passed when
+        # it was first written — a renamed const, an empty hierarchy, and a baseline entry that
+        # stopped being true.
+        run: python3 -m unittest test_validate_permission_hierarchy -v
+        working-directory: scripts/ci
+
+      - name: Compare the frontend hierarchy with the owning backend copy, and all backends with each other
+        run: python3 scripts/ci/validate_permission_hierarchy.py
+
+      - name: Summary
+        if: always()
+        run: |
+          {
+            echo "### Permission hierarchy"
+            echo ""
+            echo "Compares \`permissions.js\` against the **owning** service's handler per prefix"
+            echo "(#271), and all 14 backend copies against EACH OTHER for every key any of them"
+            echo "defines, not just the ones the frontend references (#204). Pre-existing drift is"
+            echo "baselined in \`KNOWN_DRIFT\`/\`EXPECTED_BACKEND_DIVERGENCES\`; the frontend-facing"
+            echo "baseline can only shrink, because an entry that stops drifting fails the check."
+          } >> "$GITHUB_STEP_SUMMARY"
